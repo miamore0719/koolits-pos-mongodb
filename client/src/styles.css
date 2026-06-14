@@ -106,9 +106,16 @@ button {
   border-radius: 8px;
   color: white;
   display: inline-flex;
+  gap: 7px;
   height: 42px;
   justify-content: center;
+  padding: 0 10px;
   width: 42px;
+}
+
+.user-menu .password-button {
+  font-weight: 900;
+  width: auto;
 }
 
 .topbar nav button,
@@ -780,10 +787,6 @@ select {
 
 .seller-expense-summary {
   grid-template-columns: minmax(0, 1fr);
-}
-
-.seller-password-panel {
-  margin-bottom: 16px;
 }
 
 .overview-card {
@@ -1590,6 +1593,22 @@ select {
   overflow: auto;
   padding: 18px;
   width: min(900px, 100%);
+}
+
+.password-modal {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  border: 2px solid rgba(255, 255, 255, 0.16);
+  border-radius: 15px;
+  box-shadow: 0 20px 70px rgba(0, 0, 0, 0.34);
+  color: var(--text-light);
+  max-width: 460px;
+  padding: 18px;
+  width: min(460px, 100%);
+}
+
+.password-modal form {
+  display: grid;
+  gap: 14px;
 }
 
 .modal-header {

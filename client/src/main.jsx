@@ -132,6 +132,8 @@ function App() {
   const [shouldPrint, setShouldPrint] = useState(true);
   const [showRecentOrders, setShowRecentOrders] = useState(false);
   const [recentOrders, setRecentOrders] = useState([]);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
   const [message, setMessage] = useState('');
   const [lastReceipt, setLastReceipt] = useState(null);
 
@@ -235,7 +237,21 @@ function App() {
     setCurrentUser(null);
     setCart([]);
     setPayments({ cash: '', gcash: '', maya: '' });
+    setShowPasswordModal(false);
+    setNewPassword('');
     setTab('pos');
+  };
+
+  const changeOwnPassword = async (event) => {
+    event.preventDefault();
+    try {
+      await api(`/users/${currentUser.id}/password`, { method: 'PATCH', body: JSON.stringify({ password: newPassword }) });
+      setNewPassword('');
+      setShowPasswordModal(false);
+      setMessage('Password changed.');
+    } catch (error) {
+      setMessage(error.message);
+    }
   };
 
   if (!currentUser) return <Login onLogin={handleLogin} setMessage={setMessage} message={message} />;
@@ -273,6 +289,7 @@ function App() {
         </nav>
         <div className="user-menu">
           <span><UserRound size={16} /> {currentUser.display_name} · {currentUser.role}</span>
+          <button className="password-button" onClick={() => setShowPasswordModal(true)} title="Change password"><Save size={18} /> Password</button>
           <button onClick={logout} title="Log out"><LogOut size={18} /></button>
         </div>
       </header>
@@ -428,6 +445,38 @@ function App() {
         <Expenses setMessage={setMessage} currentUser={currentUser} />
       ) : (
         <Manage categories={categories} products={products} stocks={stocks} reload={loadData} setMessage={setMessage} currentUser={currentUser} />
+      )}
+
+      {showPasswordModal && (
+        <div className="modal-backdrop" role="presentation">
+          <section className="password-modal" role="dialog" aria-modal="true" aria-labelledby="password-modal-title">
+            <div className="modal-header">
+              <div>
+                <h2 id="password-modal-title">Change Password</h2>
+                <span>Update the password for {currentUser.display_name}.</span>
+              </div>
+              <button className="icon-button modal-close" onClick={() => setShowPasswordModal(false)} title="Close password modal">
+                <X size={20} />
+              </button>
+            </div>
+            <form className="inline-form" onSubmit={changeOwnPassword}>
+              <label className="form-field">
+                <span>New Password</span>
+                <input
+                  autoFocus
+                  type="password"
+                  value={newPassword}
+                  onChange={(event) => setNewPassword(event.target.value)}
+                  placeholder="At least 4 characters"
+                />
+              </label>
+              <div className="modal-actions">
+                <button type="button" className="ghost-btn" onClick={() => setShowPasswordModal(false)}><X size={18} /> Cancel</button>
+                <button type="submit" disabled={newPassword.length < 4}><Save size={18} /> Change Password</button>
+              </div>
+            </form>
+          </section>
+        </div>
       )}
 
       <Receipt receipt={lastReceipt} />
@@ -787,7 +836,6 @@ function Expenses({ setMessage, currentUser }) {
   const expenseDate = today;
   const [expenseSearch, setExpenseSearch] = useState('');
   const [dashboard, setDashboard] = useState(null);
-  const [newPassword, setNewPassword] = useState('');
   const [expenseForm, setExpenseForm] = useState({
     expense_date: today,
     category: '',
@@ -847,17 +895,6 @@ function Expenses({ setMessage, currentUser }) {
     }
   };
 
-  const changeOwnPassword = async (event) => {
-    event.preventDefault();
-    try {
-      await api(`/users/${currentUser.id}/password`, { method: 'PATCH', body: JSON.stringify({ password: newPassword }) });
-      setNewPassword('');
-      setMessage('Password changed.');
-    } catch (error) {
-      setMessage(error.message);
-    }
-  };
-
   const summary = dashboard?.summary || { expense_total: 0, expense_count: 0 };
 
   return (
@@ -878,22 +915,6 @@ function Expenses({ setMessage, currentUser }) {
           <strong>{money(summary.expense_total)}</strong>
           <small>{summary.expense_count} record{summary.expense_count === 1 ? '' : 's'}</small>
         </article>
-      </section>
-
-      <section className="dashboard-panel seller-password-panel">
-        <div className="panel-heading">
-          <div>
-            <h2>Change Password</h2>
-            <span>Update your seller login password.</span>
-          </div>
-        </div>
-        <form className="inline-form" onSubmit={changeOwnPassword}>
-          <label className="form-field">
-            <span>New Password</span>
-            <input type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} placeholder="At least 4 characters" />
-          </label>
-          <button disabled={newPassword.length < 4}><Save size={18} /> Change Password</button>
-        </form>
       </section>
 
       <section className="dashboard-panel expenses-list-panel">
