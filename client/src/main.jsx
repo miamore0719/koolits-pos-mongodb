@@ -459,7 +459,7 @@ function App() {
                 <X size={20} />
               </button>
             </div>
-            <form className="inline-form" onSubmit={changeOwnPassword}>
+            <form onSubmit={changeOwnPassword}>
               <label className="form-field">
                 <span>New Password</span>
                 <input

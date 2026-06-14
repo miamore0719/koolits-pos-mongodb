@@ -1610,14 +1610,25 @@ select {
   border-radius: 15px;
   box-shadow: 0 20px 70px rgba(0, 0, 0, 0.34);
   color: var(--text-light);
-  max-width: 460px;
+  max-width: 560px;
   padding: 18px;
-  width: min(460px, 100%);
+  width: min(560px, 100%);
 }
 
 .password-modal form {
   display: grid;
   gap: 14px;
+  grid-template-columns: 1fr;
+}
+
+.password-modal .modal-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.password-modal .modal-actions button {
+  min-width: 0;
+  width: 100%;
 }
 
 .modal-header {
