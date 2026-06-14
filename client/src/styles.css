@@ -41,9 +41,9 @@ button {
   align-items: center;
   background: linear-gradient(135deg, var(--primary), var(--primary-dark));
   color: white;
-  display: flex;
+  display: grid;
   gap: 20px;
-  justify-content: space-between;
+  grid-template-columns: minmax(210px, auto) minmax(0, 1fr) auto;
   padding: 12px 18px;
   position: sticky;
   top: 0;
@@ -78,12 +78,16 @@ button {
 .topbar nav {
   display: flex;
   gap: 10px;
+  justify-content: center;
+  min-width: 0;
 }
 
 .user-menu {
   align-items: center;
   display: flex;
   gap: 8px;
+  justify-content: flex-end;
+  min-width: 0;
 }
 
 .user-menu span {
@@ -96,8 +100,12 @@ button {
   font-weight: 900;
   gap: 6px;
   min-height: 42px;
+  min-width: 0;
+  overflow: hidden;
   padding: 0 12px;
+  text-overflow: ellipsis;
   text-transform: capitalize;
+  white-space: nowrap;
 }
 
 .user-menu button {
@@ -115,6 +123,7 @@ button {
 
 .user-menu .password-button {
   font-weight: 900;
+  min-width: 118px;
   width: auto;
 }
 
@@ -1709,6 +1718,21 @@ select {
 }
 
 @media (max-width: 900px) {
+  .topbar {
+    grid-template-columns: 1fr;
+  }
+
+  .topbar nav,
+  .user-menu {
+    justify-content: flex-start;
+    overflow-x: auto;
+    width: 100%;
+  }
+
+  .user-menu span {
+    max-width: 220px;
+  }
+
   .pos-layout {
     grid-template-columns: 1fr;
   }
