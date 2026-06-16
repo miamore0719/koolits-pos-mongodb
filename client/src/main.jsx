@@ -620,13 +620,17 @@ function Dashboard({ setMessage, currentUser }) {
 
   const openRemittanceModal = () => {
     const daysInView = dashboard?.daily_sales || [];
-    const activeDays = daysInView.filter((day) => day.sales_total || day.expense_total).map((day) => day.business_date);
-    const defaultDays = period === 'day' ? [dashboardDate] : activeDays;
-    setSelectedRemittanceDays(defaultDays.length ? defaultDays : daysInView.slice(0, 1).map((day) => day.business_date));
+    const eligibleDays = daysInView
+      .filter((day) => !day.remittance && (day.sales_total || day.expense_total))
+      .map((day) => day.business_date);
+    const defaultDays = period === 'day' && eligibleDays.includes(dashboardDate) ? [dashboardDate] : eligibleDays;
+    setSelectedRemittanceDays(defaultDays);
     setShowRemittanceModal(true);
   };
 
   const toggleRemittanceDay = (businessDate) => {
+    const day = (dashboard?.daily_sales || []).find((item) => item.business_date === businessDate);
+    if (day?.remittance) return;
     setSelectedRemittanceDays((current) =>
       current.includes(businessDate) ? current.filter((date) => date !== businessDate) : [...current, businessDate]
     );
@@ -634,15 +638,21 @@ function Dashboard({ setMessage, currentUser }) {
 
   const submitRemittance = async () => {
     try {
+      const eligibleDates = new Set((dashboard?.daily_sales || []).filter((day) => !day.remittance).map((day) => day.business_date));
+      const datesToRemit = selectedRemittanceDays.filter((date) => eligibleDates.has(date));
+      if (!datesToRemit.length) {
+        setMessage('Choose at least one unremitted day.');
+        return;
+      }
       const dailyTotals = (dashboard?.daily_sales || []).map((day) => ({ business_date: day.business_date, amount: day.net_total }));
       await api('/remittances/bulk', {
         method: 'POST',
-        body: JSON.stringify({ dates: selectedRemittanceDays, daily_totals: dailyTotals, note: remittanceNote })
+        body: JSON.stringify({ dates: datesToRemit, daily_totals: dailyTotals, note: remittanceNote })
       });
       setRemittanceNote('');
       setShowRemittanceModal(false);
       await loadDashboard();
-      setMessage(`${selectedRemittanceDays.length} day${selectedRemittanceDays.length === 1 ? '' : 's'} marked as remitted.`);
+      setMessage(`${datesToRemit.length} day${datesToRemit.length === 1 ? '' : 's'} marked as remitted.`);
     } catch (error) {
       setMessage(error.message);
     }
@@ -657,6 +667,10 @@ function Dashboard({ setMessage, currentUser }) {
   const remittanceDaysInView = period === 'day'
     ? dailyChart.filter((day) => day.business_date === dashboardDate)
     : dailyChart;
+  const selectedRemittanceTotal = remittanceDaysInView
+    .filter((day) => selectedRemittanceDays.includes(day.business_date) && !day.remittance)
+    .reduce((sum, day) => sum + Number(day.net_total || 0), 0);
+  const selectedUnremittedDays = remittanceDaysInView.filter((day) => selectedRemittanceDays.includes(day.business_date) && !day.remittance);
 
   return (
     <main className="dashboard-shell">
@@ -868,26 +882,31 @@ function Dashboard({ setMessage, currentUser }) {
               <span>Remittance Note</span>
               <input value={remittanceNote} onChange={(event) => setRemittanceNote(event.target.value)} placeholder="Cash picked up, sent via bank, etc." />
             </label>
+            <div className="remittance-total-card">
+              <span>Selected Net Sales</span>
+              <strong>{money(selectedRemittanceTotal)}</strong>
+            </div>
             <div className="remittance-day-list">
               {remittanceDaysInView.length === 0 && <p className="empty">No days available for this view.</p>}
               {remittanceDaysInView.map((day) => (
                 <label className={`remittance-day ${day.remittance ? 'remitted' : ''}`} key={day.business_date}>
                   <input
                     type="checkbox"
-                    checked={selectedRemittanceDays.includes(day.business_date)}
+                    disabled={Boolean(day.remittance)}
+                    checked={selectedRemittanceDays.includes(day.business_date) && !day.remittance}
                     onChange={() => toggleRemittanceDay(day.business_date)}
                   />
                   <span>
                     <strong>{day.business_date}</strong>
-                    <small>Net Sales {money(day.net_total)}</small>
+                    <small>{day.remittance ? 'Already remitted' : 'Net sales only'}</small>
                   </span>
-                  <b>{day.remittance ? 'Remitted' : 'Pending'}</b>
+                  <b>{money(day.net_total)}</b>
                 </label>
               ))}
             </div>
             <div className="modal-actions">
               <button type="button" className="ghost-btn" onClick={() => setShowRemittanceModal(false)}><X size={18} /> Cancel</button>
-              <button type="button" onClick={submitRemittance}><CheckCircle2 size={18} /> Mark Selected</button>
+              <button type="button" onClick={submitRemittance} disabled={selectedUnremittedDays.length === 0}><CheckCircle2 size={18} /> Mark Selected</button>
             </div>
           </section>
         </div>

@@ -1271,6 +1271,29 @@ select {
   overflow: auto;
 }
 
+.remittance-total-card {
+  background: rgba(141, 227, 255, 0.12);
+  border: 2px solid rgba(141, 227, 255, 0.36);
+  border-radius: 12px;
+  display: flex;
+  justify-content: space-between;
+  margin-top: 12px;
+  padding: 12px 14px;
+}
+
+.remittance-total-card span {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.remittance-total-card strong {
+  color: #8de3ff;
+  font-size: 24px;
+  line-height: 1;
+}
+
 .remittance-day {
   align-items: center;
   background: rgba(255, 255, 255, 0.09);
@@ -1284,6 +1307,7 @@ select {
 
 .remittance-day.remitted {
   border-color: rgba(84, 163, 108, 0.45);
+  opacity: 0.62;
 }
 
 .remittance-day input {
