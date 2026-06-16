@@ -888,21 +888,24 @@ function Dashboard({ setMessage, currentUser }) {
             </div>
             <div className="remittance-day-list">
               {remittanceDaysInView.length === 0 && <p className="empty">No days available for this view.</p>}
-              {remittanceDaysInView.map((day) => (
-                <label className={`remittance-day ${day.remittance ? 'remitted' : ''}`} key={day.business_date}>
-                  <input
-                    type="checkbox"
-                    disabled={Boolean(day.remittance)}
-                    checked={selectedRemittanceDays.includes(day.business_date) && !day.remittance}
-                    onChange={() => toggleRemittanceDay(day.business_date)}
-                  />
-                  <span>
-                    <strong>{day.business_date}</strong>
-                    <small>{day.remittance ? 'Already remitted' : 'Net sales only'}</small>
-                  </span>
-                  <b>{money(day.net_total)}</b>
-                </label>
-              ))}
+              {remittanceDaysInView.map((day) => {
+                const remittedAt = day.remittance?.remitted_at ? new Date(day.remittance.remitted_at).toLocaleString() : null;
+                return (
+                  <label className={`remittance-day ${day.remittance ? 'remitted' : ''}`} key={day.business_date}>
+                    <input
+                      type="checkbox"
+                      disabled={Boolean(day.remittance)}
+                      checked={selectedRemittanceDays.includes(day.business_date) && !day.remittance}
+                      onChange={() => toggleRemittanceDay(day.business_date)}
+                    />
+                    <span>
+                      <strong>{day.business_date}</strong>
+                      <small>{remittedAt ? `Remitted on ${remittedAt}` : 'Net sales only'}</small>
+                    </span>
+                    <b>{money(day.net_total)}</b>
+                  </label>
+                );
+              })}
             </div>
             <div className="modal-actions">
               <button type="button" className="ghost-btn" onClick={() => setShowRemittanceModal(false)}><X size={18} /> Cancel</button>
