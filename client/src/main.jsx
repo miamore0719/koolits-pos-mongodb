@@ -40,6 +40,18 @@ const sortWithOthersLast = (items) =>
     return first.localeCompare(second);
   });
 
+const posCategoryOrder = ['16oz', '22oz', 'Regular Fries', 'Jumbo Fries', 'Waffles', 'Soft Serve', 'Drinks', 'Others'];
+const posCategoryRank = new Map(posCategoryOrder.map((name, index) => [name.toLowerCase(), index]));
+const sortPosCategories = (items) =>
+  [...items].sort((a, b) => {
+    const first = a.name.toLowerCase();
+    const second = b.name.toLowerCase();
+    const firstRank = posCategoryRank.has(first) ? posCategoryRank.get(first) : posCategoryOrder.length;
+    const secondRank = posCategoryRank.has(second) ? posCategoryRank.get(second) : posCategoryOrder.length;
+    if (firstRank !== secondRank) return firstRank - secondRank;
+    return a.name.localeCompare(b.name);
+  });
+
 const productIcon = (product) => {
   const text = `${product.name} ${product.category_name}`.toLowerCase();
   if (text.includes('lemon')) return '🍋';
@@ -161,7 +173,7 @@ function App() {
     if (!allowedTabs.includes(tab)) setTab('pos');
   }, [currentUser, tab]);
 
-  const orderedCategories = useMemo(() => sortWithOthersLast(categories), [categories]);
+  const orderedCategories = useMemo(() => sortPosCategories(categories), [categories]);
 
   const visibleProducts = useMemo(() => {
     const search = productSearch.trim().toLowerCase();
