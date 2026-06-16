@@ -251,6 +251,7 @@ button {
   grid-template-columns: minmax(0, 1fr) 450px;
   min-height: calc(100vh - 82px);
   padding: 0;
+  width: 100%;
 }
 
 .catalog,
@@ -260,6 +261,7 @@ button {
   border: 1px solid #dce5df;
   border-radius: 8px;
   box-shadow: 0 8px 24px rgba(22, 59, 75, 0.08);
+  min-width: 0;
 }
 
 .catalog {
@@ -315,6 +317,7 @@ button {
   border: 0;
   color: var(--text-light);
   min-height: 50px;
+  min-width: 0;
   padding: 0;
 }
 
@@ -534,8 +537,12 @@ h2 {
   border-bottom: 1px solid #edf2ef;
   display: grid;
   gap: 10px;
-  grid-template-columns: 1fr auto auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   padding: 12px 0;
+}
+
+.cart-item strong {
+  overflow-wrap: anywhere;
 }
 
 .cart-item span {
@@ -708,6 +715,7 @@ select {
   background: linear-gradient(135deg, var(--primary), var(--primary-dark));
   min-height: calc(100vh - 82px);
   padding: 20px;
+  width: 100%;
 }
 
 .dashboard-hero,
@@ -718,6 +726,7 @@ select {
   border-radius: 15px;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.14);
   color: var(--text-light);
+  min-width: 0;
 }
 
 .dashboard-hero {
@@ -1772,15 +1781,38 @@ select {
   }
 
   .pos-layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .pos-hero {
-    grid-template-columns: 1fr;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
   }
 
   .cart-panel {
     min-height: auto;
+  }
+
+  .product-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+
+  .cart-item {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .cart-item > b {
+    grid-column: 1 / -1;
+    justify-self: end;
+  }
+
+  .pay-methods {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .pay-methods button {
+    min-width: 0;
   }
 
   .dashboard-hero,
@@ -1813,6 +1845,10 @@ select {
 
   .expense-row {
     grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .expense-form {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   }
 
   .sale-detail-row {
@@ -1869,6 +1905,111 @@ select {
 }
 
 @media (max-width: 520px) {
+  .catalog,
+  .dashboard-shell {
+    padding: 12px;
+  }
+
+  .pos-hero h1 {
+    font-size: 32px;
+  }
+
+  .category-row {
+    grid-auto-columns: minmax(112px, max-content);
+    grid-template-rows: repeat(2, minmax(46px, auto));
+  }
+
+  .category-row button {
+    font-size: 14px;
+    min-height: 46px;
+    min-width: 112px;
+    padding: 0 10px;
+  }
+
+  .product-grid {
+    gap: 10px;
+    grid-template-columns: repeat(auto-fill, minmax(135px, 1fr));
+  }
+
+  .product-tile {
+    min-height: 170px;
+    padding: 14px;
+  }
+
+  .product-tile strong {
+    font-size: 18px;
+  }
+
+  .product-price {
+    font-size: 18px;
+  }
+
+  .cart-list,
+  .payment-box,
+  .panel-title {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .panel-title {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .cart-actions {
+    width: 100%;
+  }
+
+  .recent-button,
+  .cart-actions .icon-button {
+    flex: 1 1 0;
+  }
+
+  .total-line strong {
+    font-size: 30px;
+  }
+
+  .pay-methods button {
+    font-size: 13px;
+    gap: 5px;
+    padding: 0 6px;
+  }
+
+  .payment-input input {
+    font-size: 20px;
+  }
+
+  .checkout {
+    font-size: 18px;
+    min-height: 58px;
+  }
+
+  .dashboard-hero,
+  .dashboard-panel {
+    padding: 12px;
+  }
+
+  .overview-card strong {
+    font-size: 24px;
+  }
+
+  .expense-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .finance-row,
+  .sale-detail-row,
+  .expense-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .finance-row b,
+  .status-pill,
+  .expense-row .row-actions {
+    justify-self: start;
+  }
+
   .brand img {
     height: 48px;
     width: 48px;
