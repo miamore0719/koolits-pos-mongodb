@@ -698,7 +698,7 @@ function Dashboard({ setMessage, currentUser }) {
 
       <section className="overview-grid">
         <article className="overview-card sales-card">
-          <span>{period === 'month' ? 'Monthly Sales' : period === 'range' ? 'Range Sales' : 'Daily Sales'}</span>
+          <span>{period === 'month' ? 'Monthly Gross Sales' : period === 'range' ? 'Range Gross Sales' : 'Daily Gross Sales'}</span>
           <strong>{money(summary.sales_total)}</strong>
           <small>{summary.sales_count} order{summary.sales_count === 1 ? '' : 's'}</small>
         </article>
@@ -753,7 +753,10 @@ function Dashboard({ setMessage, currentUser }) {
                       <strong>{day.business_date}</strong>
                       <span>{day.sales_count} order{day.sales_count === 1 ? '' : 's'} · Expenses {money(day.expense_total)} · {day.remittance ? 'Remitted' : 'Not remitted'}</span>
                     </div>
-                    <b>{money(day.sales_total)}</b>
+                    <div className="sales-money-columns">
+                      <span><small>Gross</small><b>{money(day.sales_total)}</b></span>
+                      <span><small>Net</small><b>{money(day.net_total)}</b></span>
+                    </div>
                   </article>
                 ))}
               </>
@@ -772,7 +775,10 @@ function Dashboard({ setMessage, currentUser }) {
                       <span className={`status-pill ${isSaleRemitted ? 'remitted' : 'pending'}`}>
                         {isSaleRemitted ? 'Remitted' : 'Not remitted'}
                       </span>
-                      <b>{money(sale.total)}</b>
+                      <div className="sales-money-columns">
+                        <span><small>Gross</small><b>{money(sale.total)}</b></span>
+                        <span><small>Net</small><b>{money(sale.total)}</b></span>
+                      </div>
                     </article>
                   );
                 })}
@@ -873,7 +879,7 @@ function Dashboard({ setMessage, currentUser }) {
                   />
                   <span>
                     <strong>{day.business_date}</strong>
-                    <small>Sales {money(day.sales_total)} · Expenses {money(day.expense_total)} · Net {money(day.net_total)}</small>
+                    <small>Net Sales {money(day.net_total)}</small>
                   </span>
                   <b>{day.remittance ? 'Remitted' : 'Pending'}</b>
                 </label>
