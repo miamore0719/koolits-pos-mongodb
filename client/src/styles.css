@@ -19,7 +19,16 @@
 }
 
 body {
+  background: #f5f7f2;
   margin: 0;
+  overflow-x: hidden;
+}
+
+html,
+#root {
+  background: #f5f7f2;
+  min-height: 100%;
+  overflow-x: hidden;
 }
 
 button,
@@ -34,7 +43,10 @@ button {
 }
 
 .app {
+  background: #f5f7f2;
   min-height: 100vh;
+  overflow-x: hidden;
+  width: 100%;
 }
 
 .topbar {
@@ -48,6 +60,7 @@ button {
   padding: 12px 18px;
   position: sticky;
   top: 0;
+  width: 100%;
   z-index: 10;
 }
 
@@ -55,6 +68,7 @@ button {
   align-items: center;
   display: flex;
   gap: 12px;
+  min-width: 0;
 }
 
 .brand img {
@@ -81,6 +95,7 @@ button {
   flex-wrap: wrap;
   gap: 10px;
   justify-content: center;
+  min-width: 0;
 }
 
 .user-menu {
@@ -89,6 +104,7 @@ button {
   flex-wrap: wrap;
   gap: 8px;
   justify-content: flex-end;
+  min-width: 0;
 }
 
 .user-menu span {
@@ -1725,26 +1741,34 @@ select {
   .topbar {
     align-items: stretch;
     gap: 12px;
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     padding: 10px 12px;
+  }
+
+  .brand > div {
+    min-width: 0;
   }
 
   .topbar nav,
   .user-menu {
     flex-wrap: wrap;
     justify-content: flex-start;
+    width: 100%;
   }
 
   .topbar nav button {
-    flex: 1 1 130px;
+    flex: 1 1 min(130px, 100%);
+    min-width: 0;
   }
 
   .user-menu span {
     flex: 1 1 180px;
+    min-width: 0;
   }
 
   .user-menu button {
-    flex: 1 1 120px;
+    flex: 1 1 min(120px, 100%);
+    min-width: 0;
   }
 
   .pos-layout {
@@ -1864,8 +1888,26 @@ select {
     padding: 0 10px;
   }
 
+  .topbar nav {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .user-menu {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 44px;
+  }
+
+  .user-menu span {
+    grid-column: 1 / -1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .user-menu .password-button {
-    min-width: 106px;
+    min-width: 0;
+    width: 100%;
   }
 }
 
