@@ -43,12 +43,23 @@ const sortWithOthersLast = (items) =>
 const categoryOrderKey = (name) => name.toLowerCase().replace(/[^a-z0-9]/g, '');
 const posCategoryOrder = ['16oz', '22oz', 'Regular Fries', 'Jumbo Fries', 'Waffles', 'Soft Serve', 'Drinks', 'Others'];
 const posCategoryRank = new Map(posCategoryOrder.map((name, index) => [categoryOrderKey(name), index]));
+const getPosCategoryRank = (name) => {
+  const key = categoryOrderKey(name);
+  if (posCategoryRank.has(key)) return posCategoryRank.get(key);
+  if (key.includes('16') && (key.includes('oz') || key.includes('ounce'))) return 0;
+  if (key.includes('22') && (key.includes('oz') || key.includes('ounce'))) return 1;
+  if (key.includes('regular') && key.includes('fries')) return 2;
+  if (key.includes('jumbo') && key.includes('fries')) return 3;
+  if (key.includes('waffle')) return 4;
+  if (key.includes('soft') && key.includes('serve')) return 5;
+  if (key.includes('drink')) return 6;
+  if (key.includes('other')) return 7;
+  return posCategoryOrder.length;
+};
 const sortPosCategories = (items) =>
   [...items].sort((a, b) => {
-    const first = categoryOrderKey(a.name);
-    const second = categoryOrderKey(b.name);
-    const firstRank = posCategoryRank.has(first) ? posCategoryRank.get(first) : posCategoryOrder.length;
-    const secondRank = posCategoryRank.has(second) ? posCategoryRank.get(second) : posCategoryOrder.length;
+    const firstRank = getPosCategoryRank(a.name);
+    const secondRank = getPosCategoryRank(b.name);
     if (firstRank !== secondRank) return firstRank - secondRank;
     return a.name.localeCompare(b.name);
   });
