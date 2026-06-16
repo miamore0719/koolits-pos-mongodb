@@ -998,7 +998,13 @@ function SalesLineChart({ title, items, labelKey, valueKey, emptyText }) {
     const y = 88 - (Number(item[valueKey] || 0) / maxValue) * 76;
     return { item, value: Number(item[valueKey] || 0), x, y };
   });
-  const linePath = points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ');
+  const linePath = points.map((point, index) => {
+    if (index === 0) return `M ${point.x} ${point.y}`;
+
+    const previous = points[index - 1];
+    const controlX = previous.x + (point.x - previous.x) / 2;
+    return `C ${controlX} ${previous.y}, ${controlX} ${point.y}, ${point.x} ${point.y}`;
+  }).join(' ');
   const fillPath = points.length ? `${linePath} L ${points[points.length - 1].x} 92 L ${points[0].x} 92 Z` : '';
   const labelPoints = points.filter((_, index) => index === 0 || index === points.length - 1 || points.length <= 8 || index % Math.ceil(points.length / 6) === 0);
 
