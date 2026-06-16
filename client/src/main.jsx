@@ -27,6 +27,7 @@ import './styles.css';
 
 const API = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/api' : `${window.location.protocol}//${window.location.hostname}:4010/api`);
 const money = (value) => `₱${Number(value || 0).toFixed(2)}`;
+const signedMoney = (value) => `${Number(value || 0) < 0 ? '-' : ''}₱${Math.abs(Number(value || 0)).toFixed(2)}`;
 const receiptMoney = (value) => `P${Number(value || 0).toFixed(2)}`;
 const paymentLabels = { cash: 'Cash', gcash: 'GCash', maya: 'Maya' };
 
@@ -136,6 +137,8 @@ function App() {
   const [newPassword, setNewPassword] = useState('');
   const [message, setMessage] = useState('');
   const [lastReceipt, setLastReceipt] = useState(null);
+  const [sellerSalesTotal, setSellerSalesTotal] = useState(0);
+  const today = new Date().toISOString().slice(0, 10);
 
   const loadData = async () => {
     const [categoryData, productData, stockData] = await Promise.all([
@@ -173,12 +176,23 @@ function App() {
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const paidTotal = Object.values(payments).reduce((sum, value) => sum + Number(value || 0), 0);
   const remaining = Math.max(0, total - paidTotal);
-  const changeDue = Math.max(0, paidTotal - total);
+  const changeDue = paidTotal - total;
+
+  const loadSellerSalesTotal = async () => {
+    const data = await api(`/dashboard?period=day&date=${today}`);
+    setSellerSalesTotal(Number(data?.summary?.sales_total || 0));
+  };
 
   const loadRecentOrders = async () => {
     const orders = await api('/sales/recent');
     setRecentOrders(orders);
   };
+
+  useEffect(() => {
+    if (currentUser?.role === 'seller' && tab === 'pos') {
+      loadSellerSalesTotal().catch((error) => setMessage(error.message));
+    }
+  }, [currentUser, tab]);
 
   const addToCart = (product) => {
     setCart((current) => {
@@ -218,6 +232,7 @@ function App() {
       setCart([]);
       setPayments({ cash: '', gcash: '', maya: '' });
       await loadData();
+      if (currentUser?.role === 'seller') await loadSellerSalesTotal();
       if (showRecentOrders) await loadRecentOrders();
       if (shouldPrint) setTimeout(() => window.print(), 250);
     } catch (error) {
@@ -304,6 +319,12 @@ function App() {
                 <span className="seller-chip">Seller POS</span>
                 <h1>KoolITs</h1>
               </div>
+              {currentUser.role === 'seller' && (
+                <div className="seller-sales-total">
+                  <span>Today's Sales</span>
+                  <strong>{money(sellerSalesTotal)}</strong>
+                </div>
+              )}
             </div>
             <div className="category-row">
               {['All', ...orderedCategories.map((item) => item.name)].map((name) => (
@@ -376,6 +397,10 @@ function App() {
                 <span>Total</span>
                 <strong>{money(total)}</strong>
               </div>
+              <div className={`change-line ${changeDue < 0 ? 'negative' : ''}`}>
+                <span>Change</span>
+                <strong>{signedMoney(changeDue)}</strong>
+              </div>
               <div className="split-payments">
                 {Object.entries(paymentLabels).map(([method, label]) => (
                   <label className="field" key={method}>
@@ -397,7 +422,6 @@ function App() {
               <div className="payment-summary">
                 <div><span>Paid</span><strong>{money(paidTotal)}</strong></div>
                 <div><span>Remaining</span><strong>{money(remaining)}</strong></div>
-                <div><span>Change</span><strong>{money(changeDue)}</strong></div>
               </div>
               <label className="print-toggle">
                 <input type="checkbox" checked={shouldPrint} onChange={(event) => setShouldPrint(event.target.checked)} />
