@@ -1564,6 +1564,26 @@ select {
   opacity: 0.68;
 }
 
+.order-search > div {
+  background: transparent;
+  border-color: transparent;
+  padding: 0;
+}
+
+.order-search input {
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.2);
+  padding: 0 12px;
+}
+
+.orders-table .row-actions .cancel-order-button {
+  align-items: center;
+  height: auto;
+  min-height: 35px;
+  padding: 7px 10px;
+  width: auto;
+}
+
 .accounts-table .table-head,
 .accounts-table .table-row {
   grid-template-columns: minmax(150px, 1fr) minmax(120px, 0.8fr) 100px minmax(160px, 1fr) 90px;

@@ -1570,7 +1570,7 @@ function Manage({ categories, products, stocks, reload, setMessage }) {
           </div>
 
           <div className="toolbar single">
-            <label className="search-field"><span>Search Orders</span><div><Search size={18} /><input value={orderSearch} onChange={(event) => setOrderSearch(event.target.value)} placeholder="Search receipt, item, payment, status" /></div></label>
+            <label className="search-field order-search"><span>Search Orders</span><div><Search size={18} /><input value={orderSearch} onChange={(event) => setOrderSearch(event.target.value)} placeholder="Search receipt, item, payment, status" /></div></label>
           </div>
 
           <div className="data-table orders-table">
@@ -1588,12 +1588,12 @@ function Manage({ categories, products, stocks, reload, setMessage }) {
                   <span className={`status-pill ${isCancelled ? 'cancelled' : 'remitted'}`}>{isCancelled ? 'Cancelled' : 'Completed'}</span>
                   <div className="row-actions">
                     <button
-                      className="danger-btn"
+                      className="status-pill cancelled cancel-order-button"
                       disabled={isCancelled}
                       title={isCancelled ? 'Order already cancelled' : 'Cancel order'}
                       onClick={() => cancelOrder(order)}
                     >
-                      <Archive size={17} /> Cancel
+                      Cancel
                     </button>
                   </div>
                 </div>
