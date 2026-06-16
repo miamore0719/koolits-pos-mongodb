@@ -234,6 +234,7 @@ function App() {
       await loadData();
       if (currentUser?.role === 'seller') await loadSellerSalesTotal();
       if (showRecentOrders) await loadRecentOrders();
+      setMessage(`Sale recorded. Receipt ${receipt.receipt_no} saved.`);
       if (shouldPrint) setTimeout(() => window.print(), 250);
     } catch (error) {
       setMessage(error.message);
