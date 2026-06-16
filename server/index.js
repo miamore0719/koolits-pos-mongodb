@@ -475,6 +475,7 @@ app.post('/api/sales', async (req, res, next) => {
       receipt_no: receiptNo,
       subtotal,
       total,
+      status: 'completed',
       payment_method: method,
       payment_breakdown: normalizedPayments,
       amount_tendered: tendered,
@@ -504,7 +505,62 @@ app.post('/api/sales', async (req, res, next) => {
 
 app.get('/api/sales/recent', async (_req, res, next) => {
   try {
-    ok(res, await db.collection('sales').find().sort({ created_at: -1 }).limit(5).toArray());
+    ok(res, await db.collection('sales').find({ status: { $ne: 'cancelled' } }).sort({ created_at: -1 }).limit(5).toArray());
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get('/api/sales', async (req, res, next) => {
+  try {
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit || 50)));
+    ok(res, await db.collection('sales').find().sort({ created_at: -1 }).limit(limit).toArray());
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.patch('/api/sales/:id/cancel', async (req, res, next) => {
+  try {
+    const id = Number(req.params.id);
+    const sale = await db.collection('sales').findOne({ id });
+    if (!sale) return res.status(404).json({ message: 'Order not found.' });
+    if (sale.status === 'cancelled') return res.status(400).json({ message: 'Order is already cancelled.' });
+
+    const restore = new Map();
+    const saleMovements = await db.collection('inventory_movements').find({ sale_id: id, movement_type: 'sale' }).toArray();
+    if (saleMovements.length) {
+      for (const movement of saleMovements) {
+        restore.set(movement.stock_item_id, Number(restore.get(movement.stock_item_id) || 0) + Math.abs(Number(movement.quantity_change || 0)));
+      }
+    } else {
+      const recipeRows = await db.collection('product_recipes').find({ product_id: { $in: (sale.items || []).map((item) => item.product_id) } }).toArray();
+      for (const item of sale.items || []) {
+        for (const recipe of recipeRows.filter((row) => row.product_id === item.product_id)) {
+          restore.set(recipe.stock_item_id, Number(restore.get(recipe.stock_item_id) || 0) + Number(recipe.quantity_per_unit) * Number(item.quantity || 0));
+        }
+      }
+    }
+
+    for (const [stockItemId, quantity] of restore.entries()) {
+      await db.collection('stock_items').updateOne({ id: stockItemId }, { $inc: { quantity_on_hand: quantity } });
+      await db.collection('inventory_movements').insertOne({
+        id: await nextId('inventory_movements'),
+        stock_item_id: stockItemId,
+        sale_id: id,
+        movement_type: 'sale_cancel',
+        quantity_change: quantity,
+        movement_date: todayDate(),
+        note: `Cancelled receipt ${sale.receipt_no}`,
+        created_at: new Date()
+      });
+    }
+
+    await db.collection('sales').updateOne(
+      { id },
+      { $set: { status: 'cancelled', cancelled_at: new Date(), cancel_note: String(req.body.note || '') } }
+    );
+    ok(res, { ...sale, status: 'cancelled', cancelled_at: new Date() });
   } catch (error) {
     next(error);
   }
@@ -520,7 +576,7 @@ app.get('/api/dashboard', async (req, res, next) => {
     const endDate = dateStart(end);
 
     const [salesAll, expensesAll, remittances, users] = await Promise.all([
-      db.collection('sales').find({ created_at: { $gte: startDate, $lt: endDate } }).sort({ created_at: -1 }).toArray(),
+      db.collection('sales').find({ created_at: { $gte: startDate, $lt: endDate }, status: { $ne: 'cancelled' } }).sort({ created_at: -1 }).toArray(),
       db.collection('expenses').find({ expense_date: { $gte: start, $lt: end } }).sort({ expense_date: -1, created_at: -1 }).toArray(),
       db.collection('remittances').find({ business_date: { $gte: start, $lt: end } }).sort({ business_date: -1 }).toArray(),
       db.collection('users').find().toArray()
@@ -585,7 +641,7 @@ app.get('/api/dashboard', async (req, res, next) => {
 
     const graphStart = period === 'range' ? monthStart(start) : `${start.slice(0, 4)}-01-01`;
     const graphEnd = period === 'range' ? addMonths(monthStart(end), 1) : addMonths(graphStart, 12);
-    const graphSales = await db.collection('sales').find({ created_at: { $gte: dateStart(graphStart), $lt: dateStart(graphEnd) } }).toArray();
+    const graphSales = await db.collection('sales').find({ created_at: { $gte: dateStart(graphStart), $lt: dateStart(graphEnd) }, status: { $ne: 'cancelled' } }).toArray();
     const monthlyMap = new Map();
     for (const sale of graphSales) {
       const key = new Date(sale.created_at).toISOString().slice(0, 7);

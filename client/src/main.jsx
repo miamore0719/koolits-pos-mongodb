@@ -1077,6 +1077,7 @@ function Manage({ categories, products, stocks, reload, setMessage }) {
   const [productCategory, setProductCategory] = useState('All');
   const [stockSearch, setStockSearch] = useState('');
   const [recipeSearch, setRecipeSearch] = useState('');
+  const [orderSearch, setOrderSearch] = useState('');
   const [categoryForm, setCategoryForm] = useState({ name: '', color: '#275266' });
   const [stockForm, setStockForm] = useState({ name: '', unit: 'pcs', quantity_on_hand: 0, reorder_level: 0 });
   const [productForm, setProductForm] = useState({ name: '', price: '', category_id: '' });
@@ -1086,6 +1087,7 @@ function Manage({ categories, products, stocks, reload, setMessage }) {
   const [editingStockId, setEditingStockId] = useState(null);
   const [recipeModal, setRecipeModal] = useState(null);
   const [restock, setRestock] = useState({ stock_item_id: '', quantity: '', movement_date: new Date().toISOString().slice(0, 10), note: '' });
+  const [orders, setOrders] = useState([]);
   const [users, setUsers] = useState([]);
   const [userForm, setUserForm] = useState({ username: '', display_name: '', password: '', role: 'seller' });
   const [passwordForms, setPasswordForms] = useState({});
@@ -1095,8 +1097,14 @@ function Manage({ categories, products, stocks, reload, setMessage }) {
     setUsers(data);
   };
 
+  const loadOrders = async () => {
+    const data = await api('/sales?limit=100');
+    setOrders(data);
+  };
+
   useEffect(() => {
     if (manageTab === 'accounts') loadUsers().catch((error) => setMessage(error.message));
+    if (manageTab === 'orders') loadOrders().catch((error) => setMessage(error.message));
   }, [manageTab]);
 
   const save = async (path, form, reset) => {
@@ -1270,6 +1278,18 @@ function Manage({ categories, products, stocks, reload, setMessage }) {
     }
   };
 
+  const cancelOrder = async (order) => {
+    if (!window.confirm(`Cancel ${order.receipt_no}? This will remove it from sales totals and restore deducted stocks.`)) return;
+    try {
+      await api(`/sales/${order.id}/cancel`, { method: 'PATCH', body: JSON.stringify({ note: 'Cancelled by admin' }) });
+      await loadOrders();
+      await reload();
+      setMessage(`${order.receipt_no} cancelled.`);
+    } catch (error) {
+      setMessage(error.message);
+    }
+  };
+
   const filteredProducts = products.filter((product) => {
     const matchesCategory = productCategory === 'All' || product.category_name === productCategory;
     const text = `${product.name} ${product.category_name}`.toLowerCase();
@@ -1282,6 +1302,11 @@ function Manage({ categories, products, stocks, reload, setMessage }) {
     `${product.name} ${product.category_name} ${product.recipe.map((recipe) => recipe.name).join(' ')}`.toLowerCase().includes(recipeSearch.toLowerCase())
   );
 
+  const filteredOrders = orders.filter((order) => {
+    const text = `${order.receipt_no} ${order.payment_method} ${order.status || 'completed'} ${(order.items || []).map((item) => item.product_name).join(' ')}`.toLowerCase();
+    return text.includes(orderSearch.toLowerCase());
+  });
+
   return (
     <main className="manage-shell">
       <section className="manage-hero">
@@ -1293,6 +1318,7 @@ function Manage({ categories, products, stocks, reload, setMessage }) {
           <button className={manageTab === 'products' ? 'active' : ''} onClick={() => setManageTab('products')}><PackagePlus size={20} /> Products</button>
           <button className={manageTab === 'stocks' ? 'active' : ''} onClick={() => setManageTab('stocks')}><Boxes size={20} /> Stocks</button>
           <button className={manageTab === 'recipes' ? 'active' : ''} onClick={() => setManageTab('recipes')}><ClipboardList size={20} /> Product Stock Recipe</button>
+          <button className={manageTab === 'orders' ? 'active' : ''} onClick={() => setManageTab('orders')}><ReceiptText size={20} /> Manage Order</button>
           <button className={manageTab === 'accounts' ? 'active' : ''} onClick={() => setManageTab('accounts')}><UserRound size={20} /> Accounts</button>
         </div>
       </section>
@@ -1531,6 +1557,49 @@ function Manage({ categories, products, stocks, reload, setMessage }) {
               ))}
             </div>
           </section>
+        </section>
+      )}
+
+      {manageTab === 'orders' && (
+        <section className="manage-panel full">
+          <div className="panel-heading">
+            <div>
+              <h2>Manage Order</h2>
+              <span>{filteredOrders.length} order{filteredOrders.length === 1 ? '' : 's'}</span>
+            </div>
+          </div>
+
+          <div className="toolbar single">
+            <label className="search-field"><span>Search Orders</span><div><Search size={18} /><input value={orderSearch} onChange={(event) => setOrderSearch(event.target.value)} placeholder="Search receipt, item, payment, status" /></div></label>
+          </div>
+
+          <div className="data-table orders-table">
+            <div className="table-head"><span>Receipt</span><span>Date</span><span>Items</span><span>Payment</span><span>Total</span><span>Status</span><span>Actions</span></div>
+            {filteredOrders.length === 0 && <p className="empty">No orders found.</p>}
+            {filteredOrders.map((order) => {
+              const isCancelled = order.status === 'cancelled';
+              return (
+                <div className={`table-row ${isCancelled ? 'cancelled' : ''}`} key={order.id}>
+                  <strong>{order.receipt_no}</strong>
+                  <span>{new Date(order.created_at).toLocaleString()}</span>
+                  <span>{(order.items || []).map((item) => `${item.quantity}x ${item.product_name}`).join(', ')}</span>
+                  <span>{String(order.payment_method || '').toUpperCase()}</span>
+                  <span>{money(order.total)}</span>
+                  <span className={`status-pill ${isCancelled ? 'cancelled' : 'remitted'}`}>{isCancelled ? 'Cancelled' : 'Completed'}</span>
+                  <div className="row-actions">
+                    <button
+                      className="danger-btn"
+                      disabled={isCancelled}
+                      title={isCancelled ? 'Order already cancelled' : 'Cancel order'}
+                      onClick={() => cancelOrder(order)}
+                    >
+                      <Archive size={17} /> Cancel
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </section>
       )}
 

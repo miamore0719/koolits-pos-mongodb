@@ -1155,6 +1155,12 @@ select {
   color: #ffd18b !important;
 }
 
+.status-pill.cancelled {
+  background: rgba(239, 68, 68, 0.16);
+  border: 2px solid rgba(239, 68, 68, 0.48);
+  color: #ffb4b4 !important;
+}
+
 .expense-row {
   background: linear-gradient(135deg, rgba(218, 82, 68, 0.2), rgba(255, 255, 255, 0.07));
   border-color: rgba(255, 139, 112, 0.42);
@@ -1547,6 +1553,15 @@ select {
 .category-data-table .table-head,
 .category-data-table .table-row {
   grid-template-columns: 1.2fr 1fr 0.7fr 150px;
+}
+
+.orders-table .table-head,
+.orders-table .table-row {
+  grid-template-columns: 1.1fr 1fr minmax(220px, 1.7fr) 0.7fr 0.7fr 115px 120px;
+}
+
+.orders-table .table-row.cancelled {
+  opacity: 0.68;
 }
 
 .accounts-table .table-head,
