@@ -1460,7 +1460,7 @@ select {
 
 .search-field > div {
   align-items: center;
-  background: rgba(255, 255, 255, 0.1);
+  background: transparent;
   border: 2px solid rgba(255, 255, 255, 0.2);
   border-radius: 12px;
   display: flex;
@@ -1472,7 +1472,7 @@ select {
 .search-field input,
 .manage-shell input,
 .manage-shell select {
-  background: rgba(255, 255, 255, 0.1);
+  background: transparent;
   border: 2px solid rgba(255, 255, 255, 0.2);
   color: var(--text-light);
 }
@@ -1562,18 +1562,6 @@ select {
 
 .orders-table .table-row.cancelled {
   opacity: 0.68;
-}
-
-.order-search > div {
-  background: transparent;
-  border-color: transparent;
-  padding: 0;
-}
-
-.order-search input {
-  background: transparent;
-  border-color: rgba(255, 255, 255, 0.2);
-  padding: 0 12px;
 }
 
 .orders-table .row-actions .cancel-order-button {

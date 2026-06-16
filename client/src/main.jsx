@@ -1303,7 +1303,9 @@ function Manage({ categories, products, stocks, reload, setMessage }) {
   );
 
   const filteredOrders = orders.filter((order) => {
-    const text = `${order.receipt_no} ${order.payment_method} ${order.status || 'completed'} ${(order.items || []).map((item) => item.product_name).join(' ')}`.toLowerCase();
+    const orderDate = new Date(order.created_at);
+    const dateText = `${orderDate.toISOString().slice(0, 10)} ${orderDate.toLocaleDateString()} ${orderDate.toLocaleString()}`;
+    const text = `${order.receipt_no} ${dateText} ${order.payment_method} ${order.status || 'completed'} ${(order.items || []).map((item) => item.product_name).join(' ')}`.toLowerCase();
     return text.includes(orderSearch.toLowerCase());
   });
 
@@ -1570,7 +1572,7 @@ function Manage({ categories, products, stocks, reload, setMessage }) {
           </div>
 
           <div className="toolbar single">
-            <label className="search-field order-search"><span>Search Orders</span><div><Search size={18} /><input value={orderSearch} onChange={(event) => setOrderSearch(event.target.value)} placeholder="Search receipt, item, payment, status" /></div></label>
+            <label className="search-field order-search"><span>Search Orders</span><div><Search size={18} /><input value={orderSearch} onChange={(event) => setOrderSearch(event.target.value)} placeholder="Search receipt, date, item, payment, status" /></div></label>
           </div>
 
           <div className="data-table orders-table">
