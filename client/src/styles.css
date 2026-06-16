@@ -327,22 +327,24 @@ button {
 
 .category-row {
   display: grid;
-  gap: 10px;
-  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
   overflow-x: hidden;
-  padding-bottom: 12px;
+  padding-bottom: 10px;
 }
 
 .category-row button {
   background: rgba(255, 255, 255, 0.1);
   border: 2px solid transparent;
   color: var(--text-light);
-  font-size: 17px;
-  min-width: 138px;
+  font-size: 15px;
+  min-height: 44px;
+  min-width: 0;
+  padding: 0 10px;
 }
 
 .category-row button span {
-  font-size: 19px;
+  font-size: 17px;
   line-height: 1;
 }
 
@@ -1913,15 +1915,15 @@ select {
   }
 
   .category-row {
-    gap: 8px;
+    gap: 6px;
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .category-row button {
-    font-size: 14px;
-    min-height: 46px;
+    font-size: 13px;
+    min-height: 42px;
     min-width: 0;
-    padding: 0 10px;
+    padding: 0 8px;
   }
 
   .product-grid {
