@@ -176,6 +176,25 @@ button {
   padding: 12px 14px;
 }
 
+.sale-toast {
+  background: rgba(26, 40, 52, 0.94);
+  border: 2px solid rgba(141, 227, 255, 0.5);
+  border-radius: 12px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.28);
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 900;
+  left: 50%;
+  max-width: min(420px, calc(100vw - 32px));
+  padding: 16px 20px;
+  position: fixed;
+  text-align: center;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: max-content;
+  z-index: 100;
+}
+
 .login-shell {
   align-items: center;
   background: linear-gradient(135deg, var(--primary), var(--primary-dark));

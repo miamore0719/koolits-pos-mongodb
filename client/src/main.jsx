@@ -160,6 +160,7 @@ function App() {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [message, setMessage] = useState('');
+  const [saleToast, setSaleToast] = useState('');
   const [lastReceipt, setLastReceipt] = useState(null);
   const [sellerSalesTotal, setSellerSalesTotal] = useState(0);
   const today = new Date().toISOString().slice(0, 10);
@@ -218,6 +219,12 @@ function App() {
     }
   }, [currentUser, tab]);
 
+  useEffect(() => {
+    if (!saleToast) return undefined;
+    const timer = window.setTimeout(() => setSaleToast(''), 1800);
+    return () => window.clearTimeout(timer);
+  }, [saleToast]);
+
   const addToCart = (product) => {
     setCart((current) => {
       const existing = current.find((item) => item.id === product.id);
@@ -258,7 +265,7 @@ function App() {
       await loadData();
       if (currentUser?.role === 'seller') await loadSellerSalesTotal();
       if (showRecentOrders) await loadRecentOrders();
-      setMessage(`Sale recorded. Receipt ${receipt.receipt_no} saved.`);
+      setSaleToast(`Sale recorded. Receipt ${receipt.receipt_no} saved.`);
       if (shouldPrint) setTimeout(() => window.print(), 250);
     } catch (error) {
       setMessage(error.message);
@@ -335,6 +342,7 @@ function App() {
       </header>
 
       {message && <div className="toast">{message}</div>}
+      {saleToast && <div className="sale-toast" role="status">{saleToast}</div>}
 
       {tab === 'pos' ? (
         <main className="pos-layout">
