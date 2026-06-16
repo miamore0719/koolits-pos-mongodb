@@ -40,12 +40,13 @@ const sortWithOthersLast = (items) =>
     return first.localeCompare(second);
   });
 
+const categoryOrderKey = (name) => name.toLowerCase().replace(/[^a-z0-9]/g, '');
 const posCategoryOrder = ['16oz', '22oz', 'Regular Fries', 'Jumbo Fries', 'Waffles', 'Soft Serve', 'Drinks', 'Others'];
-const posCategoryRank = new Map(posCategoryOrder.map((name, index) => [name.toLowerCase(), index]));
+const posCategoryRank = new Map(posCategoryOrder.map((name, index) => [categoryOrderKey(name), index]));
 const sortPosCategories = (items) =>
   [...items].sort((a, b) => {
-    const first = a.name.toLowerCase();
-    const second = b.name.toLowerCase();
+    const first = categoryOrderKey(a.name);
+    const second = categoryOrderKey(b.name);
     const firstRank = posCategoryRank.has(first) ? posCategoryRank.get(first) : posCategoryOrder.length;
     const secondRank = posCategoryRank.has(second) ? posCategoryRank.get(second) : posCategoryOrder.length;
     if (firstRank !== secondRank) return firstRank - secondRank;
