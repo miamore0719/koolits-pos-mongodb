@@ -328,10 +328,8 @@ button {
 .category-row {
   display: grid;
   gap: 10px;
-  grid-auto-columns: minmax(138px, max-content);
-  grid-auto-flow: column;
-  grid-template-rows: repeat(2, minmax(52px, auto));
-  overflow-x: auto;
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  overflow-x: hidden;
   padding-bottom: 12px;
 }
 
@@ -1915,14 +1913,14 @@ select {
   }
 
   .category-row {
-    grid-auto-columns: minmax(112px, max-content);
-    grid-template-rows: repeat(2, minmax(46px, auto));
+    gap: 8px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .category-row button {
     font-size: 14px;
     min-height: 46px;
-    min-width: 112px;
+    min-width: 0;
     padding: 0 10px;
   }
 
