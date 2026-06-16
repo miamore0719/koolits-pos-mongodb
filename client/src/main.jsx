@@ -399,7 +399,7 @@ function App() {
                     }
                   }}
                 >
-                  <ReceiptText size={18} /> Last 5
+                  <ReceiptText size={18} /> Today's Orders
                 </button>
                 <button className="icon-button" onClick={() => setCart([])} title="Clear cart">
                   <Trash2 size={20} />
@@ -470,15 +470,15 @@ function App() {
               <section className="recent-modal" role="dialog" aria-modal="true" aria-labelledby="recent-orders-title">
                 <div className="modal-header">
                   <div>
-                    <h2 id="recent-orders-title">Last 5 Orders</h2>
-                    <span>Latest completed sales for quick seller tracking.</span>
+                    <h2 id="recent-orders-title">Today's Orders</h2>
+                    <span>All completed orders today, newest first.</span>
                   </div>
                   <button className="icon-button modal-close" onClick={() => setShowRecentOrders(false)} title="Close recent orders">
                     <X size={20} />
                   </button>
                 </div>
                 <div className="recent-order-list">
-                  {recentOrders.length === 0 && <p className="empty">No orders yet.</p>}
+                  {recentOrders.length === 0 && <p className="empty">No orders yet today.</p>}
                   {recentOrders.map((order) => (
                     <article className="recent-order-card" key={order.id}>
                       <div className="recent-order-items">

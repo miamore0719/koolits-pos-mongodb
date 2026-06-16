@@ -505,7 +505,11 @@ app.post('/api/sales', async (req, res, next) => {
 
 app.get('/api/sales/recent', async (_req, res, next) => {
   try {
-    ok(res, await db.collection('sales').find({ status: { $ne: 'cancelled' } }).sort({ created_at: -1 }).limit(5).toArray());
+    const today = todayDate();
+    ok(res, await db.collection('sales').find({
+      created_at: { $gte: dateStart(today), $lt: dateStart(addDays(today, 1)) },
+      status: { $ne: 'cancelled' }
+    }).sort({ created_at: -1 }).toArray());
   } catch (error) {
     next(error);
   }
