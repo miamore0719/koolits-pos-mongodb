@@ -1021,7 +1021,7 @@ function SalesLineChart({ title, items, labelKey, valueKey, emptyText }) {
         {visibleItems.length > 0 && (
           <>
             <svg className="line-chart-svg" viewBox="0 0 100 100" role="img" aria-label={title}>
-              <path className="line-chart-grid" d="M 8 12 H 92 M 8 50 H 92 M 8 88 H 92" />
+              <path className="line-chart-grid" d="M 8 8 H 92 M 8 19 H 92 M 8 30 H 92 M 8 41 H 92 M 8 52 H 92 M 8 63 H 92 M 8 74 H 92 M 8 85 H 92" />
               <path className="line-chart-fill" d={fillPath} />
               <path className="line-chart-line" d={linePath} />
               {points.map((point) => (
