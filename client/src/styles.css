@@ -537,7 +537,7 @@ h2 {
   border-bottom: 1px solid #edf2ef;
   display: grid;
   gap: 10px;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   padding: 12px 0;
 }
 
@@ -549,6 +549,18 @@ h2 {
   color: #68777e;
   display: block;
   font-size: 13px;
+}
+
+.cart-item-controls {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.cart-item-controls > b {
+  min-width: 76px;
+  text-align: right;
 }
 
 .qty {
@@ -1798,15 +1810,6 @@ select {
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   }
 
-  .cart-item {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-
-  .cart-item > b {
-    grid-column: 1 / -1;
-    justify-self: end;
-  }
-
   .pay-methods {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -1968,6 +1971,29 @@ select {
 
   .total-line strong {
     font-size: 30px;
+  }
+
+  .cart-item {
+    gap: 8px;
+  }
+
+  .cart-item-controls {
+    gap: 6px;
+  }
+
+  .cart-item-controls > b {
+    font-size: 14px;
+    min-width: 64px;
+  }
+
+  .qty {
+    grid-template-columns: 34px 28px 34px;
+    min-height: 38px;
+  }
+
+  .qty button {
+    font-size: 18px;
+    height: 38px;
   }
 
   .pay-methods button {

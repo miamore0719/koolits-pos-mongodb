@@ -360,12 +360,14 @@ function App() {
                     <strong>{item.name}</strong>
                     <span>{money(item.price)} each</span>
                   </div>
-                  <div className="qty">
-                    <button onClick={() => updateQty(item.id, -1)}>-</button>
-                    <b>{item.quantity}</b>
-                    <button onClick={() => updateQty(item.id, 1)}>+</button>
+                  <div className="cart-item-controls">
+                    <div className="qty">
+                      <button onClick={() => updateQty(item.id, -1)}>-</button>
+                      <b>{item.quantity}</b>
+                      <button onClick={() => updateQty(item.id, 1)}>+</button>
+                    </div>
+                    <b>{money(item.price * item.quantity)}</b>
                   </div>
-                  <b>{money(item.price * item.quantity)}</b>
                 </div>
               ))}
             </div>
