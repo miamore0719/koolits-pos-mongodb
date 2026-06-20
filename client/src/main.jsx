@@ -154,6 +154,7 @@ function App() {
   const [category, setCategory] = useState('All');
   const [productSearch, setProductSearch] = useState('');
   const [payments, setPayments] = useState({ cash: '', gcash: '', maya: '' });
+  const [saleDate, setSaleDate] = useState(new Date().toISOString().slice(0, 10));
   const [shouldPrint, setShouldPrint] = useState(true);
   const [showRecentOrders, setShowRecentOrders] = useState(false);
   const [recentOrders, setRecentOrders] = useState([]);
@@ -256,12 +257,14 @@ function App() {
             gcash: Number(payments.gcash || 0),
             maya: Number(payments.maya || 0)
           },
+          sale_date: currentUser?.role === 'admin' ? saleDate : undefined,
           items: cart.map((item) => ({ product_id: item.id, quantity: item.quantity }))
         })
       });
       setLastReceipt(receipt);
       setCart([]);
       setPayments({ cash: '', gcash: '', maya: '' });
+      setSaleDate(new Date().toISOString().slice(0, 10));
       await loadData();
       if (currentUser?.role === 'seller') await loadSellerSalesTotal();
       if (showRecentOrders) await loadRecentOrders();
@@ -434,6 +437,12 @@ function App() {
                 <span>Change</span>
                 <strong>{signedMoney(changeDue)}</strong>
               </div>
+              {currentUser.role === 'admin' && (
+                <label className="field admin-sale-date">
+                  Sale Date
+                  <input type="date" value={saleDate} onChange={(event) => setSaleDate(event.target.value)} />
+                </label>
+              )}
               <div className="split-payments">
                 {Object.entries(paymentLabels).map(([method, label]) => (
                   <label className="field" key={method}>
@@ -562,6 +571,7 @@ function Dashboard({ setMessage, currentUser }) {
   });
   const [editingExpenseId, setEditingExpenseId] = useState(null);
   const [remittanceNote, setRemittanceNote] = useState('');
+  const [remittanceDate, setRemittanceDate] = useState(today);
 
   const currentPeriodLabel = period === 'month' ? 'month' : period === 'range' ? 'range' : 'day';
   const selectedMonth = dashboardDate.slice(0, 7);
@@ -647,9 +657,10 @@ function Dashboard({ setMessage, currentUser }) {
       const dailyTotals = (dashboard?.daily_sales || []).map((day) => ({ business_date: day.business_date, amount: day.net_total }));
       await api('/remittances/bulk', {
         method: 'POST',
-        body: JSON.stringify({ dates: datesToRemit, daily_totals: dailyTotals, note: remittanceNote })
+        body: JSON.stringify({ dates: datesToRemit, daily_totals: dailyTotals, note: remittanceNote, remitted_date: remittanceDate })
       });
       setRemittanceNote('');
+      setRemittanceDate(today);
       setShowRemittanceModal(false);
       await loadDashboard();
       setMessage(`${datesToRemit.length} day${datesToRemit.length === 1 ? '' : 's'} marked as remitted.`);
@@ -881,6 +892,10 @@ function Dashboard({ setMessage, currentUser }) {
             <label className="form-field">
               <span>Remittance Note</span>
               <input value={remittanceNote} onChange={(event) => setRemittanceNote(event.target.value)} placeholder="Cash picked up, sent via bank, etc." />
+            </label>
+            <label className="form-field">
+              <span>Date Remitted</span>
+              <input type="date" value={remittanceDate} onChange={(event) => setRemittanceDate(event.target.value)} />
             </label>
             <div className="remittance-total-card">
               <span>Selected Net Sales</span>

@@ -406,7 +406,7 @@ app.delete('/api/recipes/:id', async (req, res, next) => {
 
 app.post('/api/sales', async (req, res, next) => {
   try {
-    const { items = [], payment_method, amount_tendered = 0, payments } = req.body;
+    const { items = [], payment_method, amount_tendered = 0, payments, sale_date } = req.body;
     if (!items.length) return res.status(400).json({ message: 'Cart is empty.' });
     if (payment_method && !['cash', 'gcash', 'maya', 'mixed'].includes(payment_method)) {
       return res.status(400).json({ message: 'Use cash, gcash, or maya payment.' });
@@ -470,6 +470,7 @@ app.post('/api/sales', async (req, res, next) => {
     const method = usedMethods.length > 1 ? 'mixed' : usedMethods[0] || payment_method || 'cash';
     const receiptNo = `KLT-${Date.now()}`;
     const saleId = await nextId('sales');
+    const saleCreatedAt = sale_date ? new Date(`${sale_date}T12:00:00.000Z`) : new Date();
     const sale = {
       id: saleId,
       receipt_no: receiptNo,
@@ -481,7 +482,7 @@ app.post('/api/sales', async (req, res, next) => {
       amount_tendered: tendered,
       change_due: change,
       items: saleItems.map((item) => ({ ...item, sale_id: saleId })),
-      created_at: new Date()
+      created_at: saleCreatedAt
     };
     await db.collection('sales').insertOne(sale);
     for (const stock of required.values()) {
@@ -492,9 +493,9 @@ app.post('/api/sales', async (req, res, next) => {
         sale_id: saleId,
         movement_type: 'sale',
         quantity_change: -stock.required_quantity,
-        movement_date: todayDate(),
+        movement_date: sale_date || todayDate(),
         note: `Receipt ${receiptNo}`,
-        created_at: new Date()
+        created_at: saleCreatedAt
       });
     }
     ok(res, sale);
@@ -738,9 +739,10 @@ app.delete('/api/expenses/:id', async (req, res, next) => {
 
 app.post('/api/remittances', async (req, res, next) => {
   try {
-    const { business_date, amount, note = '' } = req.body;
+    const { business_date, amount, note = '', remitted_date } = req.body;
     if (!business_date) return res.status(400).json({ message: 'Choose the day to mark as remitted.' });
-    const remittance = { business_date, amount: Number(amount || 0), note, remitted_at: new Date() };
+    const remittedAt = remitted_date ? dateStart(remitted_date) : new Date();
+    const remittance = { business_date, amount: Number(amount || 0), note, remitted_at: remittedAt };
     await db.collection('remittances').updateOne(
       { business_date },
       { $set: remittance, $setOnInsert: { id: await nextId('remittances') } },
@@ -756,6 +758,7 @@ app.post('/api/remittances/bulk', async (req, res, next) => {
   try {
     const dates = Array.isArray(req.body.dates) ? req.body.dates : [];
     const note = req.body.note || '';
+    const remittedAt = req.body.remitted_date ? dateStart(req.body.remitted_date) : new Date();
     const dailyTotals = Array.isArray(req.body.daily_totals) ? req.body.daily_totals : [];
     if (!dates.length) return res.status(400).json({ message: 'Choose at least one day to remit.' });
     for (const business_date of dates) {
@@ -763,7 +766,7 @@ app.post('/api/remittances/bulk', async (req, res, next) => {
       await db.collection('remittances').updateOne(
         { business_date },
         {
-          $set: { business_date, amount: Number(total?.amount || 0), note, remitted_at: new Date() },
+          $set: { business_date, amount: Number(total?.amount || 0), note, remitted_at: remittedAt },
           $setOnInsert: { id: await nextId('remittances') }
         },
         { upsert: true }
