@@ -430,14 +430,16 @@ app.post('/api/sales', async (req, res, next) => {
     }
 
     const recipeRows = await db.collection('product_recipes').find({ product_id: { $in: ids } }).toArray();
-    const [waffleCategory, eggStock, oilStock] = await Promise.all([
+    const [waffleCategory, eggStock, oilStock, waffleMixStock] = await Promise.all([
       db.collection('categories').findOne({ name: { $regex: '^waffles?$', $options: 'i' } }),
       db.collection('stock_items').findOne({ name: { $regex: '^eggs?$', $options: 'i' }, is_active: true }),
-      db.collection('stock_items').findOne({ name: { $regex: 'oil', $options: 'i' }, is_active: true })
+      db.collection('stock_items').findOne({ name: { $regex: 'oil', $options: 'i' }, is_active: true }),
+      db.collection('stock_items').findOne({ name: { $regex: 'waffle.*mix|mix.*waffle', $options: 'i' }, is_active: true })
     ]);
     const stockIds = recipeRows.map((recipe) => recipe.stock_item_id);
     if (eggStock) stockIds.push(eggStock.id);
     if (oilStock) stockIds.push(oilStock.id);
+    if (waffleMixStock) stockIds.push(waffleMixStock.id);
     const stocks = await db.collection('stock_items').find({ id: { $in: stockIds } }).toArray();
     const stockMap = new Map(stocks.map((stock) => [stock.id, stock]));
     const required = new Map();
@@ -451,7 +453,12 @@ app.post('/api/sales', async (req, res, next) => {
       const product = productMap.get(item.product_id);
       if (waffleCategory && product?.category_id === waffleCategory.id) {
         const productRecipeStockIds = new Set(recipeRows.filter((row) => row.product_id === item.product_id).map((row) => row.stock_item_id));
-        for (const [stock, amount] of [[eggStock, 4], [oilStock, 0.5]]) {
+        const halfCupInLiters = 0.118294;
+        for (const [stock, amount] of [
+          [eggStock, 4 / 16],
+          [oilStock, halfCupInLiters / 16],
+          [waffleMixStock, 1 / 16]
+        ]) {
           if (!stock || productRecipeStockIds.has(stock.id)) continue;
           const current = required.get(stock.id) || { ...stock, stock_item_id: stock.id, required_quantity: 0 };
           current.required_quantity += amount * item.quantity;
