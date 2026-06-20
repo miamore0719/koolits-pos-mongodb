@@ -542,33 +542,6 @@ app.get('/api/sales', async (req, res, next) => {
   }
 });
 
-app.delete('/api/admin/clear-sales', async (req, res, next) => {
-  try {
-    if (req.get('x-maintenance-token') !== 'koolits-clear-20260620-b7e91c') {
-      return res.status(403).json({ message: 'Forbidden.' });
-    }
-    const movements = await db.collection('inventory_movements').find({ sale_id: { $exists: true } }).toArray();
-    const netChanges = new Map();
-    for (const movement of movements) {
-      netChanges.set(movement.stock_item_id, Number(netChanges.get(movement.stock_item_id) || 0) + Number(movement.quantity_change || 0));
-    }
-    for (const [stockItemId, change] of netChanges.entries()) {
-      if (change) await db.collection('stock_items').updateOne({ id: stockItemId }, { $inc: { quantity_on_hand: -change } });
-    }
-    const salesResult = await db.collection('sales').deleteMany({});
-    const movementsResult = await db.collection('inventory_movements').deleteMany({ sale_id: { $exists: true } });
-    const remittancesResult = await db.collection('remittances').deleteMany({});
-    ok(res, {
-      sales_deleted: salesResult.deletedCount,
-      movements_deleted: movementsResult.deletedCount,
-      remittances_deleted: remittancesResult.deletedCount,
-      stocks_adjusted: [...netChanges.values()].filter(Boolean).length
-    });
-  } catch (error) {
-    next(error);
-  }
-});
-
 app.patch('/api/sales/:id/cancel', async (req, res, next) => {
   try {
     const id = Number(req.params.id);
