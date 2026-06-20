@@ -430,16 +430,18 @@ app.post('/api/sales', async (req, res, next) => {
     }
 
     const recipeRows = await db.collection('product_recipes').find({ product_id: { $in: ids } }).toArray();
-    const [waffleCategory, eggStock, oilStock, waffleMixStock] = await Promise.all([
+    const [waffleCategory, eggStock, oilStock, waffleMixStock, nutellaStock] = await Promise.all([
       db.collection('categories').findOne({ name: { $regex: '^waffles?$', $options: 'i' } }),
       db.collection('stock_items').findOne({ name: { $regex: '^eggs?$', $options: 'i' }, is_active: true }),
       db.collection('stock_items').findOne({ name: { $regex: 'oil', $options: 'i' }, is_active: true }),
-      db.collection('stock_items').findOne({ name: { $regex: 'waffle.*mix|mix.*waffle', $options: 'i' }, is_active: true })
+      db.collection('stock_items').findOne({ name: { $regex: 'waffle.*mix|mix.*waffle', $options: 'i' }, is_active: true }),
+      db.collection('stock_items').findOne({ name: { $regex: '^nutella$', $options: 'i' }, is_active: true })
     ]);
     const stockIds = recipeRows.map((recipe) => recipe.stock_item_id);
     if (eggStock) stockIds.push(eggStock.id);
     if (oilStock) stockIds.push(oilStock.id);
     if (waffleMixStock) stockIds.push(waffleMixStock.id);
+    if (nutellaStock) stockIds.push(nutellaStock.id);
     const stocks = await db.collection('stock_items').find({ id: { $in: stockIds } }).toArray();
     const stockMap = new Map(stocks.map((stock) => [stock.id, stock]));
     const required = new Map();
@@ -457,7 +459,8 @@ app.post('/api/sales', async (req, res, next) => {
         for (const [stock, amount] of [
           [eggStock, 4 / 16],
           [oilStock, halfCupInLiters / 16],
-          [waffleMixStock, 1 / 16]
+          [waffleMixStock, 1 / 16],
+          [/^nutella$/i.test(product.name) ? nutellaStock : null, 1 / 160]
         ]) {
           if (!stock || productRecipeStockIds.has(stock.id)) continue;
           const current = required.get(stock.id) || { ...stock, stock_item_id: stock.id, required_quantity: 0 };
