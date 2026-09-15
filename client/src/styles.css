@@ -2425,10 +2425,19 @@ select {
   }
 
   .receipt-print h1,
-  .receipt-print p {
+  .receipt-print p,
+  .receipt-text {
     font-size: 8px;
     margin: 1px 0;
     text-align: center;
+  }
+
+  .receipt-text {
+    font-family: "Courier New", Consolas, monospace;
+    line-height: 1.18;
+    margin: 0;
+    text-align: left;
+    white-space: pre-wrap;
   }
 
   .receipt-print h1 {

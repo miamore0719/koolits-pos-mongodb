@@ -2029,37 +2029,51 @@ function Manage({ categories, products, stocks, reload, setMessage, currentUser 
   );
 }
 
+const receiptLine = (left, right = '', width = 32) => {
+  const rightText = String(right);
+  const leftText = String(left);
+  if (!rightText) return leftText;
+  const leftWidth = Math.max(1, width - rightText.length - 1);
+  const trimmedLeft = leftText.length > leftWidth ? leftText.slice(0, leftWidth) : leftText;
+  return `${trimmedLeft.padEnd(width - rightText.length)}${rightText}`;
+};
+
+const receiptCenter = (text, width = 32) => {
+  const value = String(text);
+  const left = Math.max(0, Math.floor((width - value.length) / 2));
+  return `${' '.repeat(left)}${value}`;
+};
+
 function Receipt({ receipt }) {
   if (!receipt) return null;
+  const receiptText = [
+    receiptCenter('KOOLITS'),
+    receiptCenter('POS Receipt'),
+    receiptCenter(receipt.receipt_no),
+    receiptCenter(new Date().toLocaleString()),
+    '',
+    '',
+    '-'.repeat(32),
+    ...receipt.items.map((item) => receiptLine(`${item.quantity}x ${item.product_name}`, receiptMoney(item.line_total))),
+    '-'.repeat(32),
+    '',
+    receiptLine('Total', receiptMoney(receipt.total)),
+    '',
+    `Payment ${receipt.payment_method.toUpperCase()}`,
+    ...(receipt.payment_breakdown
+      ? Object.entries(paymentLabels)
+          .filter(([method]) => Number(receipt.payment_breakdown[method] || 0) > 0)
+          .map(([method, label]) => receiptLine(label, receiptMoney(receipt.payment_breakdown[method])))
+      : []),
+    receiptLine('Received', receiptMoney(receipt.amount_tendered)),
+    receiptLine('Change', receiptMoney(receipt.change_due)),
+    '-'.repeat(32),
+    receiptCenter('Thank you!')
+  ].join('\n');
+
   return (
     <section className="receipt-print">
-      <h1>KoolITs</h1>
-      <p className="receipt-subtitle">POS Receipt</p>
-      <p>{receipt.receipt_no}</p>
-      <p>{new Date().toLocaleString()}</p>
-      <div className="receipt-gap" />
-      <div className="receipt-rule" />
-      {receipt.items.map((item) => (
-        <div className="receipt-row" key={item.product_id}>
-          <span>{item.quantity}x {item.product_name}</span>
-          <span>{receiptMoney(item.line_total)}</span>
-        </div>
-      ))}
-      <div className="receipt-rule" />
-      <div className="receipt-gap small" />
-      <div className="receipt-row strong"><span>Total</span><span>{receiptMoney(receipt.total)}</span></div>
-      <div className="receipt-gap small" />
-      <div className="receipt-row strong payment-row"><span>Payment</span><span>{receipt.payment_method.toUpperCase()}</span></div>
-      {receipt.payment_breakdown &&
-        Object.entries(paymentLabels).map(([method, label]) =>
-          Number(receipt.payment_breakdown[method] || 0) > 0 ? (
-            <div className="receipt-row" key={method}><span>{label}</span><span>{receiptMoney(receipt.payment_breakdown[method])}</span></div>
-          ) : null
-        )}
-      <div className="receipt-row"><span>Received</span><span>{receiptMoney(receipt.amount_tendered)}</span></div>
-      <div className="receipt-row"><span>Change</span><span>{receiptMoney(receipt.change_due)}</span></div>
-      <div className="receipt-rule" />
-      <p>Thank you!</p>
+      <pre className="receipt-text">{receiptText}</pre>
     </section>
   );
 }
