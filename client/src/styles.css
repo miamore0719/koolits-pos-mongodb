@@ -2374,14 +2374,30 @@ select {
   html,
   body {
     background: #fff !important;
+    height: auto !important;
     margin: 0 !important;
+    min-height: 0 !important;
     padding: 0 !important;
     width: 58mm;
     zoom: 1;
   }
 
+  #root,
+  .app {
+    background: #fff !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    width: 58mm !important;
+  }
+
   body * {
+    max-height: none !important;
     visibility: hidden;
+  }
+
+  .app > :not(.receipt-print) {
+    display: none !important;
   }
 
   .receipt-print,
@@ -2399,7 +2415,7 @@ select {
     line-height: 1.15;
     min-height: 3in;
     padding: 1mm;
-    position: absolute;
+    position: static;
     top: 0;
     width: 56mm;
   }
@@ -2433,7 +2449,7 @@ select {
   }
 
   .receipt-gap {
-    height: 4px;
+    height: 12px;
   }
 
   .receipt-gap.small {
@@ -2441,20 +2457,18 @@ select {
   }
 
   .receipt-row {
-    display: flex;
-    justify-content: space-between;
-    gap: 3px;
+    display: grid;
+    gap: 2px;
+    grid-template-columns: minmax(0, 1fr) auto;
     margin: 1px 0;
     page-break-inside: avoid;
   }
 
   .receipt-row span:first-child {
-    flex: 1;
     overflow-wrap: anywhere;
   }
 
   .receipt-row span:last-child {
-    flex: 0 0 auto;
     text-align: right;
   }
 
