@@ -441,7 +441,7 @@ button {
 }
 
 .product-tile strong {
-  font-size: 20px;
+  font-size: 22px;
   line-height: 1.12;
 }
 
@@ -2121,7 +2121,7 @@ select {
   }
 
   .product-tile strong {
-    font-size: 16px;
+    font-size: 17px;
   }
 
   .product-price {
