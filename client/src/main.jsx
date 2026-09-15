@@ -164,6 +164,7 @@ function App() {
   const [message, setMessage] = useState('');
   const [saleToast, setSaleToast] = useState('');
   const [lastReceipt, setLastReceipt] = useState(null);
+  const [pendingPrint, setPendingPrint] = useState(false);
   const [sellerSalesTotal, setSellerSalesTotal] = useState(0);
   const today = new Date().toISOString().slice(0, 10);
 
@@ -227,6 +228,15 @@ function App() {
     return () => window.clearTimeout(timer);
   }, [saleToast]);
 
+  useEffect(() => {
+    if (!pendingPrint || !lastReceipt) return undefined;
+    const frame = window.requestAnimationFrame(() => {
+      window.print();
+      setPendingPrint(false);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [pendingPrint, lastReceipt]);
+
   const addToCart = (product) => {
     setCart((current) => {
       const existing = current.find((item) => item.id === product.id);
@@ -269,7 +279,7 @@ function App() {
       if (currentUser?.role === 'seller') await loadSellerSalesTotal();
       if (showRecentOrders) await loadRecentOrders();
       setSaleToast(`Sale recorded. Receipt ${receipt.receipt_no} saved.`);
-      if (shouldPrint) setTimeout(() => window.print(), 250);
+      if (shouldPrint) setPendingPrint(true);
     } catch (error) {
       setMessage(error.message);
     }
