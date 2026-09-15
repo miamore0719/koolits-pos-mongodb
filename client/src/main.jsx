@@ -578,6 +578,8 @@ function Dashboard({ setMessage, currentUser }) {
   const [stockPeriod, setStockPeriod] = useState('day');
   const [stockDate, setStockDate] = useState(today);
   const [stockDeductions, setStockDeductions] = useState(null);
+  const [stockDeductionSearch, setStockDeductionSearch] = useState('');
+  const [showStockDeductions, setShowStockDeductions] = useState(true);
 
   const currentPeriodLabel = period === 'month' ? 'month' : period === 'range' ? 'range' : 'day';
   const selectedMonth = dashboardDate.slice(0, 7);
@@ -698,7 +700,10 @@ function Dashboard({ setMessage, currentUser }) {
     .filter((day) => selectedRemittanceDays.includes(day.business_date) && !day.remittance)
     .reduce((sum, day) => sum + Number(day.net_total || 0), 0);
   const selectedUnremittedDays = remittanceDaysInView.filter((day) => selectedRemittanceDays.includes(day.business_date) && !day.remittance);
-  const stockDeductionItems = stockDeductions?.items || [];
+  const stockDeductionItems = (stockDeductions?.items || []).filter((item) => {
+    const text = `${item.stock_name} ${item.unit} ${item.deducted_quantity}`.toLowerCase();
+    return text.includes(stockDeductionSearch.toLowerCase());
+  });
   const stockPeriodLabel = stockDeductions
     ? stockDeductions.start === stockDeductions.range_end ? stockDeductions.start : `${stockDeductions.start} to ${stockDeductions.range_end}`
     : stockDate;
@@ -766,6 +771,9 @@ function Dashboard({ setMessage, currentUser }) {
             <span>{stockPeriodLabel}</span>
           </div>
           <div className="stock-deduction-controls">
+            <button className="stock-toggle-button" onClick={() => setShowStockDeductions((current) => !current)}>
+              {showStockDeductions ? 'Hide' : 'View'}
+            </button>
             <div className="segmented">
               <button className={stockPeriod === 'day' ? 'active' : ''} onClick={() => setStockPeriod('day')}>Day</button>
               <button className={stockPeriod === 'week' ? 'active' : ''} onClick={() => setStockPeriod('week')}>Week</button>
@@ -781,22 +789,33 @@ function Dashboard({ setMessage, currentUser }) {
             </label>
           </div>
         </div>
-        <div className="stock-deduction-total">
-          <span>{stockDeductions?.total_items || 0} stock item{stockDeductions?.total_items === 1 ? '' : 's'} deducted</span>
-          <strong>{stockDeductions?.total_movements || 0} deduction record{stockDeductions?.total_movements === 1 ? '' : 's'}</strong>
-        </div>
-        <div className="stock-deduction-list">
-          {stockDeductionItems.length === 0 && <p className="empty">No stocks deducted for this period.</p>}
-          {stockDeductionItems.map((item) => (
-            <article className="stock-deduction-row" key={item.stock_item_id}>
+        {showStockDeductions && (
+          <>
+            <div className="stock-deduction-total">
+              <span>{stockDeductionItems.length} of {stockDeductions?.total_items || 0} stock item{stockDeductions?.total_items === 1 ? '' : 's'} deducted</span>
+              <strong>{stockDeductions?.total_movements || 0} deduction record{stockDeductions?.total_movements === 1 ? '' : 's'}</strong>
+            </div>
+            <label className="search-field stock-deduction-search">
+              <span>Search Stock Deductions</span>
               <div>
-                <strong>{item.stock_name}</strong>
-                <span>{item.movement_count} sale deduction{item.movement_count === 1 ? '' : 's'}</span>
+                <Search size={18} />
+                <input value={stockDeductionSearch} onChange={(event) => setStockDeductionSearch(event.target.value)} placeholder="Search stock, unit, quantity" />
               </div>
-              <b>{quantityText(item.deducted_quantity)} {item.unit}</b>
-            </article>
-          ))}
-        </div>
+            </label>
+            <div className="stock-deduction-list">
+              {stockDeductionItems.length === 0 && <p className="empty">No stocks deducted for this period.</p>}
+              {stockDeductionItems.map((item) => (
+                <article className="stock-deduction-row" key={item.stock_item_id}>
+                  <div>
+                    <strong>{item.stock_name}</strong>
+                    <span>{item.movement_count} sale deduction{item.movement_count === 1 ? '' : 's'}</span>
+                  </div>
+                  <b>{quantityText(item.deducted_quantity)} {item.unit}</b>
+                </article>
+              ))}
+            </div>
+          </>
+        )}
       </section>
 
       <section className="chart-grid">

@@ -1112,6 +1112,15 @@ select {
   min-width: 170px;
 }
 
+.stock-toggle-button {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  color: var(--text-light);
+  font-weight: 900;
+  min-height: 48px;
+  padding: 0 16px;
+}
+
 .stock-deduction-total {
   align-items: center;
   background: rgba(255, 255, 255, 0.09);
@@ -1131,6 +1140,10 @@ select {
 .stock-deduction-total strong {
   color: #8de3ff;
   font-size: 20px;
+}
+
+.stock-deduction-search {
+  margin-bottom: 12px;
 }
 
 .stock-deduction-list {
