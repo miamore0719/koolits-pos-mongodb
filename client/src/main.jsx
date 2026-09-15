@@ -29,7 +29,7 @@ const API = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/api' : `${
 const money = (value) => `₱${Number(value || 0).toFixed(2)}`;
 const signedMoney = (value) => `${Number(value || 0) < 0 ? '-' : ''}₱${Math.abs(Number(value || 0)).toFixed(2)}`;
 const receiptMoney = (value) => `P${Number(value || 0).toFixed(2)}`;
-const paymentLabels = { cash: 'Cash', gcash: 'GCash', maya: 'Maya' };
+const paymentLabels = { cash: 'Cash', gcash: 'GCash' };
 const quantityText = (value) => Number(value || 0).toLocaleString(undefined, { maximumFractionDigits: 3 });
 
 const sortWithOthersLast = (items) =>
@@ -154,7 +154,7 @@ function App() {
   const [cart, setCart] = useState([]);
   const [category, setCategory] = useState('All');
   const [productSearch, setProductSearch] = useState('');
-  const [payments, setPayments] = useState({ cash: '', gcash: '', maya: '' });
+  const [payments, setPayments] = useState({ cash: '', gcash: '' });
   const [saleDate, setSaleDate] = useState(new Date().toISOString().slice(0, 10));
   const [shouldPrint, setShouldPrint] = useState(true);
   const [showRecentOrders, setShowRecentOrders] = useState(false);
@@ -255,8 +255,7 @@ function App() {
         body: JSON.stringify({
           payments: {
             cash: Number(payments.cash || 0),
-            gcash: Number(payments.gcash || 0),
-            maya: Number(payments.maya || 0)
+            gcash: Number(payments.gcash || 0)
           },
           sale_date: currentUser?.role === 'admin' ? saleDate : undefined,
           items: cart.map((item) => ({ product_id: item.id, quantity: item.quantity }))
@@ -264,7 +263,7 @@ function App() {
       });
       setLastReceipt(receipt);
       setCart([]);
-      setPayments({ cash: '', gcash: '', maya: '' });
+      setPayments({ cash: '', gcash: '' });
       setSaleDate(new Date().toISOString().slice(0, 10));
       await loadData();
       if (currentUser?.role === 'seller') await loadSellerSalesTotal();
@@ -287,7 +286,7 @@ function App() {
     localStorage.removeItem('koolits-user');
     setCurrentUser(null);
     setCart([]);
-    setPayments({ cash: '', gcash: '', maya: '' });
+    setPayments({ cash: '', gcash: '' });
     setShowPasswordModal(false);
     setNewPassword('');
     setTab('pos');
