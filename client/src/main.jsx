@@ -369,21 +369,23 @@ function App() {
                 </button>
               ))}
             </div>
-            <label className="pos-search">
-              <Search size={20} />
-              <input value={productSearch} onChange={(event) => setProductSearch(event.target.value)} placeholder="Search lemonade, waffles, fries..." />
-            </label>
-            <div className="product-grid">
-              {visibleProducts.map((product) => (
-                <button className="product-tile" key={product.id} onClick={() => addToCart(product)}>
-                  <span className="product-icon">{productIcon(product)}</span>
-                  <strong>{product.name}</strong>
-                  <span className="product-price">{money(product.price)}</span>
-                  <small>
-                    {product.recipe.length ? `${product.recipe.length} stock item${product.recipe.length > 1 ? 's' : ''}` : 'No stock recipe'}
-                  </small>
-                </button>
-              ))}
+            <div className="product-scroll">
+              <label className="pos-search">
+                <Search size={20} />
+                <input value={productSearch} onChange={(event) => setProductSearch(event.target.value)} placeholder="Search lemonade, waffles, fries..." />
+              </label>
+              <div className="product-grid">
+                {visibleProducts.map((product) => (
+                  <button className="product-tile" key={product.id} onClick={() => addToCart(product)}>
+                    <span className="product-icon">{productIcon(product)}</span>
+                    <strong>{product.name}</strong>
+                    <span className="product-price">{money(product.price)}</span>
+                    <small>
+                      {product.recipe.length ? `${product.recipe.length} stock item${product.recipe.length > 1 ? 's' : ''}` : 'No stock recipe'}
+                    </small>
+                  </button>
+                ))}
+              </div>
             </div>
           </section>
 

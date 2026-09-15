@@ -377,6 +377,13 @@ button {
   color: rgba(255, 255, 255, 0.5);
 }
 
+.product-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
 .category-row {
   display: grid;
   gap: 6px;
@@ -407,12 +414,8 @@ button {
 .product-grid {
   align-content: start;
   display: grid;
-  flex: 1;
   gap: 12px;
   grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
-  min-height: 0;
-  overflow-y: auto;
-  padding-right: 6px;
 }
 
 .product-tile {
@@ -1962,7 +1965,7 @@ select {
     overflow: visible;
   }
 
-  .product-grid {
+  .product-scroll {
     overflow: visible;
     padding-right: 0;
   }
