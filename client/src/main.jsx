@@ -1154,6 +1154,7 @@ function Manage({ categories, products, stocks, reload, setMessage, currentUser 
   const [recipeSearch, setRecipeSearch] = useState('');
   const [orderSearch, setOrderSearch] = useState('');
   const [manageExpenseSearch, setManageExpenseSearch] = useState('');
+  const [manageStockSearch, setManageStockSearch] = useState('');
   const [categoryForm, setCategoryForm] = useState({ name: '', color: '#275266' });
   const [stockForm, setStockForm] = useState({ name: '', unit: 'pcs', quantity_on_hand: 0, reorder_level: 0 });
   const [productForm, setProductForm] = useState({ name: '', price: '', category_id: '' });
@@ -1364,6 +1365,7 @@ function Manage({ categories, products, stocks, reload, setMessage, currentUser 
         description: '',
         payment_method: 'cash'
       });
+      setManageStockSearch('');
       await loadManageExpenses();
       setMessage('Stock expense added.');
     } catch (error) {
@@ -1433,6 +1435,10 @@ function Manage({ categories, products, stocks, reload, setMessage, currentUser 
     const text = `${expense.stock_item_name || ''} ${expense.category} ${expense.description} ${expense.expense_date} ${expense.payment_method} ${expense.created_by_name || ''}`.toLowerCase();
     return text.includes(manageExpenseSearch.toLowerCase());
   });
+
+  const filteredManageStocks = stocks.filter((stock) =>
+    stock.name.toLowerCase().includes(manageStockSearch.toLowerCase())
+  );
 
   const filteredOrders = orders.filter((order) => {
     const orderDate = new Date(order.created_at);
@@ -1707,9 +1713,10 @@ function Manage({ categories, products, stocks, reload, setMessage, currentUser 
           <form className="inline-form manage-expense-form" onSubmit={submitManageExpense}>
             <label className="form-field">
               <span>Stock Item</span>
+              <input value={manageStockSearch} onChange={(event) => setManageStockSearch(event.target.value)} placeholder="Search stock item" />
               <select required value={manageExpenseForm.stock_item_id} onChange={(event) => setManageExpenseForm({ ...manageExpenseForm, stock_item_id: event.target.value })}>
                 <option value="">Select stock item</option>
-                {stocks.map((stock) => <option value={stock.id} key={stock.id}>{stock.name}</option>)}
+                {filteredManageStocks.map((stock) => <option value={stock.id} key={stock.id}>{stock.name}</option>)}
               </select>
             </label>
             <label className="form-field">

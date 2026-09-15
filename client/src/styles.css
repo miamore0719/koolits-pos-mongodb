@@ -408,8 +408,8 @@ button {
   align-content: start;
   display: grid;
   flex: 1;
-  gap: 14px;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
   min-height: 0;
   overflow-y: auto;
   padding-right: 6px;
@@ -425,8 +425,8 @@ button {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  min-height: 206px;
-  padding: 18px;
+  min-height: 180px;
+  padding: 14px;
   text-align: left;
   transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
 }
@@ -438,13 +438,13 @@ button {
 }
 
 .product-tile strong {
-  font-size: 23px;
+  font-size: 20px;
   line-height: 1.12;
 }
 
 .product-price {
   color: var(--secondary);
-  font-size: 21px;
+  font-size: 19px;
   font-weight: 900;
 }
 
@@ -454,11 +454,11 @@ button {
   border: 2px solid rgba(255, 255, 255, 0.16);
   border-radius: 14px;
   display: inline-flex;
-  font-size: 36px;
-  height: 62px;
+  font-size: 30px;
+  height: 54px;
   justify-content: center;
   line-height: 1;
-  width: 62px;
+  width: 54px;
 }
 
 .product-tile small {
@@ -471,7 +471,8 @@ button {
   box-shadow: -5px 0 20px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
-  min-height: calc(100vh - 82px);
+  height: calc(100vh - 82px);
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -480,6 +481,7 @@ button {
   background: linear-gradient(135deg, #f8faf7, #eef4f1);
   border-bottom: 1px solid #dce5df;
   display: flex;
+  flex: 0 0 auto;
   justify-content: space-between;
   padding: 16px;
 }
@@ -578,7 +580,8 @@ h2 {
 }
 
 .cart-list {
-  flex: 1;
+  flex: 1 1 140px;
+  min-height: 120px;
   overflow-y: auto;
   padding: 8px 16px;
 }
@@ -643,6 +646,7 @@ h2 {
 
 .payment-box {
   border-top: 1px solid #dce5df;
+  flex: 0 0 auto;
   padding: 16px;
 }
 
@@ -1976,6 +1980,7 @@ select {
   }
 
   .cart-panel {
+    height: auto;
     min-height: auto;
   }
 
@@ -2108,16 +2113,16 @@ select {
   }
 
   .product-tile {
-    min-height: 170px;
-    padding: 14px;
+    min-height: 154px;
+    padding: 12px;
   }
 
   .product-tile strong {
-    font-size: 18px;
+    font-size: 16px;
   }
 
   .product-price {
-    font-size: 18px;
+    font-size: 16px;
   }
 
   .cart-list,
