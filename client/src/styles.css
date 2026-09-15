@@ -2397,6 +2397,7 @@ select {
     font-weight: 600;
     left: 0;
     line-height: 1.15;
+    min-height: 3in;
     padding: 1mm;
     position: absolute;
     top: 0;
