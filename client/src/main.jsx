@@ -2046,6 +2046,7 @@ function Receipt({ receipt }) {
         </div>
       ))}
       <div className="receipt-rule" />
+      <div className="receipt-gap small" />
       <div className="receipt-row strong"><span>Total</span><span>{receiptMoney(receipt.total)}</span></div>
       <div className="receipt-gap small" />
       <div className="receipt-row strong payment-row"><span>Payment</span><span>{receipt.payment_method.toUpperCase()}</span></div>
