@@ -269,7 +269,9 @@ button {
   display: grid;
   gap: 0;
   grid-template-columns: minmax(0, 1fr) 450px;
+  height: calc(100vh - 82px);
   min-height: calc(100vh - 82px);
+  overflow: hidden;
   padding: 0;
   width: 100%;
 }
@@ -289,6 +291,10 @@ button {
   border: 0;
   border-radius: 0;
   box-shadow: none;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
   padding: 18px 22px 24px;
 }
 
@@ -399,9 +405,14 @@ button {
 }
 
 .product-grid {
+  align-content: start;
   display: grid;
+  flex: 1;
   gap: 14px;
   grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 6px;
 }
 
 .product-tile {
@@ -1939,6 +1950,17 @@ select {
 
   .pos-layout {
     grid-template-columns: minmax(0, 1fr);
+    height: auto;
+    overflow: visible;
+  }
+
+  .catalog {
+    overflow: visible;
+  }
+
+  .product-grid {
+    overflow: visible;
+    padding-right: 0;
   }
 
   .pos-hero {
