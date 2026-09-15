@@ -254,12 +254,14 @@ function App() {
   };
 
   const checkout = async () => {
+    let printWindow = null;
     try {
       setMessage('');
       if (paidTotal < total) {
         setMessage(`Payment is less than payable. Remaining ${money(total - paidTotal)}.`);
         return;
       }
+      printWindow = shouldPrint ? preparePrintWindow() : null;
       const receipt = await api('/sales', {
         method: 'POST',
         body: JSON.stringify({
@@ -279,8 +281,9 @@ function App() {
       if (currentUser?.role === 'seller') await loadSellerSalesTotal();
       if (showRecentOrders) await loadRecentOrders();
       setSaleToast(`Sale recorded. Receipt ${receipt.receipt_no} saved.`);
-      if (shouldPrint) setPendingPrint(true);
+      if (shouldPrint && !printReceiptWindow(receipt, printWindow)) setPendingPrint(true);
     } catch (error) {
+      if (printWindow) printWindow.close();
       setMessage(error.message);
     }
   };
@@ -2054,9 +2057,7 @@ const receiptCenter = (text, width = 32) => {
   return `${' '.repeat(left)}${value}`;
 };
 
-function Receipt({ receipt }) {
-  if (!receipt) return null;
-  const receiptText = [
+const buildReceiptText = (receipt) => [
     receiptCenter('KOOLITS'),
     receiptCenter('POS Receipt'),
     receiptCenter(receipt.receipt_no),
@@ -2080,6 +2081,72 @@ function Receipt({ receipt }) {
     '-'.repeat(32),
     receiptCenter('Thank you!')
   ].join('\n');
+
+const escapeHtml = (value) =>
+  String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+
+const preparePrintWindow = () => {
+  const printWindow = window.open('', 'koolits-receipt-print', 'width=320,height=600');
+  if (!printWindow) return null;
+  printWindow.document.open();
+  printWindow.document.write('<!doctype html><title>KoolITs Receipt</title><p style="font-family:monospace">Preparing receipt...</p>');
+  printWindow.document.close();
+  return printWindow;
+};
+
+const printReceiptWindow = (receipt, printWindow) => {
+  if (!printWindow) return false;
+  const receiptText = buildReceiptText(receipt);
+  printWindow.document.open();
+  printWindow.document.write(`<!doctype html>
+<html>
+<head>
+  <title>KoolITs Receipt</title>
+  <style>
+    @page { margin: 0; size: 58mm auto; }
+    html, body { background: #fff; margin: 0; padding: 0; width: 58mm; }
+    pre {
+      box-sizing: border-box;
+      color: #000;
+      font-family: "Courier New", Consolas, monospace;
+      font-size: 8px;
+      font-weight: 600;
+      line-height: 1.18;
+      margin: 0;
+      min-height: 3in;
+      padding: 1mm;
+      white-space: pre-wrap;
+      width: 56mm;
+    }
+  </style>
+</head>
+<body>
+  <pre>${escapeHtml(receiptText)}</pre>
+  <script>
+    window.onload = function () {
+      setTimeout(function () {
+        window.focus();
+        window.print();
+      }, 80);
+    };
+    window.onafterprint = function () {
+      window.close();
+    };
+  </script>
+</body>
+</html>`);
+  printWindow.document.close();
+  return true;
+};
+
+function Receipt({ receipt }) {
+  if (!receipt) return null;
+  const receiptText = buildReceiptText(receipt);
 
   return (
     <section className="receipt-print">
