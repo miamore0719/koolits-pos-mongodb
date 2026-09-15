@@ -1253,7 +1253,7 @@ function Manage({ categories, products, stocks, reload, setMessage, currentUser 
   });
   const [users, setUsers] = useState([]);
   const [userForm, setUserForm] = useState({ username: '', display_name: '', password: '', role: 'seller' });
-  const [passwordForms, setPasswordForms] = useState({});
+  const [editingUserId, setEditingUserId] = useState(null);
 
   const loadUsers = async () => {
     const data = await api('/users');
@@ -1465,10 +1465,13 @@ function Manage({ categories, products, stocks, reload, setMessage, currentUser 
   const submitUser = async (event) => {
     event.preventDefault();
     try {
-      await api('/users', { method: 'POST', body: JSON.stringify(userForm) });
+      const path = editingUserId ? `/users/${editingUserId}` : '/users';
+      const method = editingUserId ? 'PATCH' : 'POST';
+      await api(path, { method, body: JSON.stringify(userForm) });
       setUserForm({ username: '', display_name: '', password: '', role: 'seller' });
+      setEditingUserId(null);
       await loadUsers();
-      setMessage('Account added.');
+      setMessage(editingUserId ? 'Account updated.' : 'Account added.');
     } catch (error) {
       setMessage(error.message);
     }
@@ -1476,10 +1479,36 @@ function Manage({ categories, products, stocks, reload, setMessage, currentUser 
 
   const changeUserPassword = async (user) => {
     try {
-      const password = passwordForms[user.id] || '';
+      const password = window.prompt(`New password for ${user.display_name}`);
+      if (password === null) return;
       await api(`/users/${user.id}/password`, { method: 'PATCH', body: JSON.stringify({ password }) });
-      setPasswordForms((current) => ({ ...current, [user.id]: '' }));
       setMessage(`${user.display_name} password changed.`);
+    } catch (error) {
+      setMessage(error.message);
+    }
+  };
+
+  const editUser = (user) => {
+    setEditingUserId(user.id);
+    setUserForm({ username: user.username, display_name: user.display_name, password: '', role: user.role });
+  };
+
+  const resetUserForm = () => {
+    setEditingUserId(null);
+    setUserForm({ username: '', display_name: '', password: '', role: 'seller' });
+  };
+
+  const deleteUser = async (user) => {
+    if (user.id === currentUser?.id) {
+      setMessage('You cannot delete the account you are using.');
+      return;
+    }
+    if (!window.confirm(`Delete ${user.display_name}?`)) return;
+    try {
+      await api(`/users/${user.id}`, { method: 'DELETE' });
+      if (editingUserId === user.id) resetUserForm();
+      await loadUsers();
+      setMessage(`${user.display_name} deleted.`);
     } catch (error) {
       setMessage(error.message);
     }
@@ -1907,7 +1936,14 @@ function Manage({ categories, products, stocks, reload, setMessage, currentUser 
             </label>
             <label className="form-field">
               <span>Password</span>
-              <input required type="password" value={userForm.password} onChange={(event) => setUserForm({ ...userForm, password: event.target.value })} placeholder="At least 4 characters" />
+              <input
+                required={!editingUserId}
+                type="password"
+                value={userForm.password}
+                onChange={(event) => setUserForm({ ...userForm, password: event.target.value })}
+                placeholder={editingUserId ? 'Use Change Password button' : 'At least 4 characters'}
+                disabled={Boolean(editingUserId)}
+              />
             </label>
             <label className="form-field">
               <span>Role</span>
@@ -1916,32 +1952,21 @@ function Manage({ categories, products, stocks, reload, setMessage, currentUser 
                 <option value="admin">Admin</option>
               </select>
             </label>
-            <button><UserRound size={18} /> Add Account</button>
+            <button><UserRound size={18} /> {editingUserId ? 'Update Account' : 'Add Account'}</button>
+            {editingUserId && <button type="button" className="ghost-btn" onClick={resetUserForm}><X size={18} /> Cancel</button>}
           </form>
 
           <div className="data-table accounts-table">
-            <div className="table-head"><span>Name</span><span>Username</span><span>Role</span><span>New Password</span><span>Actions</span></div>
+            <div className="table-head"><span>Name</span><span>Username</span><span>Role</span><span>Actions</span></div>
             {users.map((user) => (
               <div className="table-row" key={user.id}>
                 <strong>{user.display_name}</strong>
                 <span>{user.username}</span>
                 <span className="status-pill remitted">{user.role}</span>
-                <span>
-                  <input
-                    type="password"
-                    value={passwordForms[user.id] || ''}
-                    onChange={(event) => setPasswordForms({ ...passwordForms, [user.id]: event.target.value })}
-                    placeholder="New password"
-                  />
-                </span>
                 <div className="row-actions">
-                  <button
-                    title="Change password"
-                    disabled={(passwordForms[user.id] || '').length < 4}
-                    onClick={() => changeUserPassword(user)}
-                  >
-                    <Save size={17} /> Change
-                  </button>
+                  <button title="Edit account" onClick={() => editUser(user)}><Edit3 size={17} /> Edit</button>
+                  <button title="Change password" onClick={() => changeUserPassword(user)}><Save size={17} /> Password</button>
+                  <button title="Delete account" className="danger-btn" disabled={user.id === currentUser?.id} onClick={() => deleteUser(user)}><Archive size={17} /> Delete</button>
                 </div>
               </div>
             ))}

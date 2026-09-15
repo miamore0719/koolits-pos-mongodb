@@ -1761,7 +1761,7 @@ select {
 
 .accounts-table .table-head,
 .accounts-table .table-row {
-  grid-template-columns: minmax(150px, 1fr) minmax(120px, 0.8fr) 100px minmax(160px, 1fr) 90px;
+  grid-template-columns: minmax(150px, 1fr) minmax(120px, 0.8fr) 100px minmax(360px, 1.5fr);
 }
 
 .accounts-table input {

@@ -134,7 +134,7 @@ app.post('/api/auth/login', async (req, res, next) => {
 app.get('/api/users', async (_req, res, next) => {
   try {
     const users = await db.collection('users')
-      .find({}, { projection: { password_hash: 0 } })
+      .find({ is_active: true }, { projection: { password_hash: 0 } })
       .sort({ role: 1, display_name: 1 })
       .toArray();
     ok(res, users);
@@ -169,12 +169,39 @@ app.post('/api/users', async (req, res, next) => {
   }
 });
 
+app.patch('/api/users/:id', async (req, res, next) => {
+  try {
+    const id = Number(req.params.id);
+    const username = String(req.body.username || '').trim();
+    const displayName = String(req.body.display_name || username).trim();
+    const role = ['admin', 'seller'].includes(req.body.role) ? req.body.role : 'seller';
+    if (!username || !displayName) {
+      return res.status(400).json({ message: 'Username and display name are required.' });
+    }
+    await db.collection('users').updateOne({ id }, { $set: { username, display_name: displayName, role } });
+    ok(res, { id, username, display_name: displayName, role });
+  } catch (error) {
+    if (error.code === 11000) error.message = 'Username already exists.';
+    next(error);
+  }
+});
+
 app.patch('/api/users/:id/password', async (req, res, next) => {
   try {
     const password = String(req.body.password || '');
     if (password.length < 4) return res.status(400).json({ message: 'Password must be at least 4 characters.' });
     const id = Number(req.params.id);
     await db.collection('users').updateOne({ id }, { $set: { password_hash: hashPassword(password) } });
+    ok(res, { id });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.delete('/api/users/:id', async (req, res, next) => {
+  try {
+    const id = Number(req.params.id);
+    await db.collection('users').updateOne({ id }, { $set: { is_active: false } });
     ok(res, { id });
   } catch (error) {
     next(error);
