@@ -588,7 +588,10 @@ h2 {
 }
 
 .cart-item strong {
-  overflow-wrap: anywhere;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .cart-item span {
