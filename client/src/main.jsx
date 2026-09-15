@@ -30,6 +30,7 @@ const money = (value) => `₱${Number(value || 0).toFixed(2)}`;
 const signedMoney = (value) => `${Number(value || 0) < 0 ? '-' : ''}₱${Math.abs(Number(value || 0)).toFixed(2)}`;
 const receiptMoney = (value) => `P${Number(value || 0).toFixed(2)}`;
 const paymentLabels = { cash: 'Cash', gcash: 'GCash', maya: 'Maya' };
+const quantityText = (value) => Number(value || 0).toLocaleString(undefined, { maximumFractionDigits: 3 });
 
 const sortWithOthersLast = (items) =>
   [...items].sort((a, b) => {
@@ -574,6 +575,9 @@ function Dashboard({ setMessage, currentUser }) {
   const [editingExpenseId, setEditingExpenseId] = useState(null);
   const [remittanceNote, setRemittanceNote] = useState('');
   const [remittanceDate, setRemittanceDate] = useState(today);
+  const [stockPeriod, setStockPeriod] = useState('day');
+  const [stockDate, setStockDate] = useState(today);
+  const [stockDeductions, setStockDeductions] = useState(null);
 
   const currentPeriodLabel = period === 'month' ? 'month' : period === 'range' ? 'range' : 'day';
   const selectedMonth = dashboardDate.slice(0, 7);
@@ -590,9 +594,19 @@ function Dashboard({ setMessage, currentUser }) {
     setDashboard(data);
   };
 
+  const loadStockDeductions = async () => {
+    const params = new URLSearchParams({ period: stockPeriod, date: stockDate });
+    const data = await api(`/stock-deductions?${params.toString()}`);
+    setStockDeductions(data);
+  };
+
   useEffect(() => {
     loadDashboard().catch((error) => setMessage(error.message));
   }, [period, dashboardDate, rangeStart, rangeEnd, financeSearch]);
+
+  useEffect(() => {
+    loadStockDeductions().catch((error) => setMessage(error.message));
+  }, [stockPeriod, stockDate]);
 
   useEffect(() => {
     if (!editingExpenseId) {
@@ -684,6 +698,10 @@ function Dashboard({ setMessage, currentUser }) {
     .filter((day) => selectedRemittanceDays.includes(day.business_date) && !day.remittance)
     .reduce((sum, day) => sum + Number(day.net_total || 0), 0);
   const selectedUnremittedDays = remittanceDaysInView.filter((day) => selectedRemittanceDays.includes(day.business_date) && !day.remittance);
+  const stockDeductionItems = stockDeductions?.items || [];
+  const stockPeriodLabel = stockDeductions
+    ? stockDeductions.start === stockDeductions.range_end ? stockDeductions.start : `${stockDeductions.start} to ${stockDeductions.range_end}`
+    : stockDate;
 
   return (
     <main className="dashboard-shell">
@@ -739,6 +757,46 @@ function Dashboard({ setMessage, currentUser }) {
           <strong>{money(summary.net_total)}</strong>
           <small>Sales minus expenses</small>
         </article>
+      </section>
+
+      <section className="dashboard-panel stock-deduction-panel">
+        <div className="panel-heading">
+          <div>
+            <h2>Stock Deducted Summary</h2>
+            <span>{stockPeriodLabel}</span>
+          </div>
+          <div className="stock-deduction-controls">
+            <div className="segmented">
+              <button className={stockPeriod === 'day' ? 'active' : ''} onClick={() => setStockPeriod('day')}>Day</button>
+              <button className={stockPeriod === 'week' ? 'active' : ''} onClick={() => setStockPeriod('week')}>Week</button>
+              <button className={stockPeriod === 'month' ? 'active' : ''} onClick={() => setStockPeriod('month')}>Month</button>
+            </div>
+            <label className="form-field">
+              <span>{stockPeriod === 'month' ? 'Month' : 'Date'}</span>
+              <input
+                type={stockPeriod === 'month' ? 'month' : 'date'}
+                value={stockPeriod === 'month' ? stockDate.slice(0, 7) : stockDate}
+                onChange={(event) => setStockDate(stockPeriod === 'month' ? `${event.target.value}-01` : event.target.value)}
+              />
+            </label>
+          </div>
+        </div>
+        <div className="stock-deduction-total">
+          <span>{stockDeductions?.total_items || 0} stock item{stockDeductions?.total_items === 1 ? '' : 's'} deducted</span>
+          <strong>{stockDeductions?.total_movements || 0} deduction record{stockDeductions?.total_movements === 1 ? '' : 's'}</strong>
+        </div>
+        <div className="stock-deduction-list">
+          {stockDeductionItems.length === 0 && <p className="empty">No stocks deducted for this period.</p>}
+          {stockDeductionItems.map((item) => (
+            <article className="stock-deduction-row" key={item.stock_item_id}>
+              <div>
+                <strong>{item.stock_name}</strong>
+                <span>{item.movement_count} sale deduction{item.movement_count === 1 ? '' : 's'}</span>
+              </div>
+              <b>{quantityText(item.deducted_quantity)} {item.unit}</b>
+            </article>
+          ))}
+        </div>
       </section>
 
       <section className="chart-grid">

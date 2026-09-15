@@ -1092,6 +1092,79 @@ select {
   color: rgba(255, 255, 255, 0.68);
 }
 
+.stock-deduction-panel {
+  margin-bottom: 16px;
+}
+
+.stock-deduction-controls {
+  align-items: end;
+  display: flex;
+  gap: 10px;
+}
+
+.stock-deduction-controls .segmented {
+  margin: 0;
+}
+
+.stock-deduction-controls .form-field {
+  min-width: 170px;
+}
+
+.stock-deduction-total {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.09);
+  border: 2px solid rgba(141, 227, 255, 0.22);
+  border-radius: 10px;
+  display: flex;
+  justify-content: space-between;
+  margin: 14px 0;
+  padding: 12px 14px;
+}
+
+.stock-deduction-total span {
+  color: rgba(255, 255, 255, 0.72);
+  font-weight: 800;
+}
+
+.stock-deduction-total strong {
+  color: #8de3ff;
+  font-size: 20px;
+}
+
+.stock-deduction-list {
+  display: grid;
+  gap: 10px;
+}
+
+.stock-deduction-row {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 12px;
+}
+
+.stock-deduction-row strong,
+.stock-deduction-row b {
+  color: var(--text-light);
+}
+
+.stock-deduction-row span {
+  color: rgba(255, 255, 255, 0.62);
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  margin-top: 3px;
+}
+
+.stock-deduction-row b {
+  color: var(--secondary);
+  font-size: 20px;
+  text-align: right;
+}
+
 .remittance-panel {
   align-items: end;
   display: grid;
@@ -2001,12 +2074,18 @@ select {
 
   .dashboard-hero,
   .dashboard-controls,
+  .stock-deduction-controls,
+  .stock-deduction-total,
   .remittance-panel {
     align-items: stretch;
     flex-direction: column;
   }
 
   .dashboard-controls {
+    display: grid;
+  }
+
+  .stock-deduction-controls {
     display: grid;
   }
 

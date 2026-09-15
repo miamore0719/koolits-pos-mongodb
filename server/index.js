@@ -38,6 +38,15 @@ const addMonths = (value, months) => {
 const dateStart = (value) => new Date(`${value}T00:00:00.000Z`);
 const escapeRegex = (value) => String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+const weekStart = (value) => {
+  const [year, month, day] = value.split('-').map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  const dayIndex = date.getUTCDay();
+  const mondayOffset = dayIndex === 0 ? -6 : 1 - dayIndex;
+  date.setUTCDate(date.getUTCDate() + mondayOffset);
+  return date.toISOString().slice(0, 10);
+};
+
 function getDateRange(query) {
   const period = ['month', 'range'].includes(query.period) ? query.period : 'day';
   const baseDate = query.date || todayDate();
@@ -51,6 +60,20 @@ function getDateRange(query) {
     return { period, date: baseDate, start, end: addMonths(start, 1) };
   }
   return { period, date: baseDate, start: baseDate, end: addDays(baseDate, 1) };
+}
+
+function getStockDeductionRange(query) {
+  const period = ['week', 'month'].includes(query.period) ? query.period : 'day';
+  const baseDate = query.date || todayDate();
+  if (period === 'week') {
+    const start = weekStart(baseDate);
+    return { period, date: baseDate, start, end: addDays(start, 7), range_end: addDays(start, 6) };
+  }
+  if (period === 'month') {
+    const start = monthStart(baseDate);
+    return { period, date: baseDate, start, end: addMonths(start, 1), range_end: addDays(addMonths(start, 1), -1) };
+  }
+  return { period, date: baseDate, start: baseDate, end: addDays(baseDate, 1), range_end: baseDate };
 }
 
 async function productRows() {
@@ -341,6 +364,52 @@ app.get('/api/stocks/:id/movements', async (req, res, next) => {
       .limit(50)
       .toArray();
     ok(res, movements.map((movement) => ({ ...movement, stock_name: stock?.name || '', unit: stock?.unit || '' })));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get('/api/stock-deductions', async (req, res, next) => {
+  try {
+    const { period, date, start, end, range_end } = getStockDeductionRange(req.query);
+    const movements = await db.collection('inventory_movements')
+      .find({ movement_type: 'sale', movement_date: { $gte: start, $lt: end } })
+      .sort({ movement_date: -1, created_at: -1 })
+      .toArray();
+    const saleIds = [...new Set(movements.map((movement) => movement.sale_id).filter(Boolean))];
+    const [sales, stocks] = await Promise.all([
+      saleIds.length ? db.collection('sales').find({ id: { $in: saleIds }, status: { $ne: 'cancelled' } }).toArray() : [],
+      db.collection('stock_items').find().toArray()
+    ]);
+    const activeSaleIds = new Set(sales.map((sale) => sale.id));
+    const stockMap = new Map(stocks.map((stock) => [stock.id, stock]));
+    const summaryMap = new Map();
+
+    for (const movement of movements) {
+      if (!activeSaleIds.has(movement.sale_id)) continue;
+      const stock = stockMap.get(movement.stock_item_id) || {};
+      const current = summaryMap.get(movement.stock_item_id) || {
+        stock_item_id: movement.stock_item_id,
+        stock_name: stock.name || 'Unknown Stock',
+        unit: stock.unit || '',
+        deducted_quantity: 0,
+        movement_count: 0
+      };
+      current.deducted_quantity += Math.abs(Number(movement.quantity_change || 0));
+      current.movement_count += 1;
+      summaryMap.set(movement.stock_item_id, current);
+    }
+
+    ok(res, {
+      period,
+      date,
+      start,
+      end,
+      range_end,
+      total_items: summaryMap.size,
+      total_movements: [...summaryMap.values()].reduce((sum, item) => sum + Number(item.movement_count || 0), 0),
+      items: [...summaryMap.values()].sort((a, b) => b.deducted_quantity - a.deducted_quantity || a.stock_name.localeCompare(b.stock_name))
+    });
   } catch (error) {
     next(error);
   }
