@@ -1145,7 +1145,7 @@ function SalesLineChart({ title, items, labelKey, valueKey, emptyText }) {
   );
 }
 
-function Manage({ categories, products, stocks, reload, setMessage }) {
+function Manage({ categories, products, stocks, reload, setMessage, currentUser }) {
   const unitOptions = ['pcs', 'grams', 'ml', 'liters', 'gallon', 'kg', 'packs', 'boxes', 'others'];
   const [manageTab, setManageTab] = useState('products');
   const [productSearch, setProductSearch] = useState('');
@@ -1153,6 +1153,7 @@ function Manage({ categories, products, stocks, reload, setMessage }) {
   const [stockSearch, setStockSearch] = useState('');
   const [recipeSearch, setRecipeSearch] = useState('');
   const [orderSearch, setOrderSearch] = useState('');
+  const [manageExpenseSearch, setManageExpenseSearch] = useState('');
   const [categoryForm, setCategoryForm] = useState({ name: '', color: '#275266' });
   const [stockForm, setStockForm] = useState({ name: '', unit: 'pcs', quantity_on_hand: 0, reorder_level: 0 });
   const [productForm, setProductForm] = useState({ name: '', price: '', category_id: '' });
@@ -1163,6 +1164,14 @@ function Manage({ categories, products, stocks, reload, setMessage }) {
   const [recipeModal, setRecipeModal] = useState(null);
   const [restock, setRestock] = useState({ stock_item_id: '', quantity: '', movement_date: new Date().toISOString().slice(0, 10), note: '' });
   const [orders, setOrders] = useState([]);
+  const [manageExpenses, setManageExpenses] = useState([]);
+  const [manageExpenseForm, setManageExpenseForm] = useState({
+    stock_item_id: '',
+    expense_date: new Date().toISOString().slice(0, 10),
+    amount: '',
+    description: '',
+    payment_method: 'cash'
+  });
   const [users, setUsers] = useState([]);
   const [userForm, setUserForm] = useState({ username: '', display_name: '', password: '', role: 'seller' });
   const [passwordForms, setPasswordForms] = useState({});
@@ -1177,9 +1186,15 @@ function Manage({ categories, products, stocks, reload, setMessage }) {
     setOrders(data);
   };
 
+  const loadManageExpenses = async () => {
+    const data = await api('/expenses?limit=500');
+    setManageExpenses(data);
+  };
+
   useEffect(() => {
     if (manageTab === 'accounts') loadUsers().catch((error) => setMessage(error.message));
     if (manageTab === 'orders') loadOrders().catch((error) => setMessage(error.message));
+    if (manageTab === 'expenses') loadManageExpenses().catch((error) => setMessage(error.message));
   }, [manageTab]);
 
   const save = async (path, form, reset) => {
@@ -1330,6 +1345,43 @@ function Manage({ categories, products, stocks, reload, setMessage }) {
     }
   };
 
+  const submitManageExpense = async (event) => {
+    event.preventDefault();
+    try {
+      const stock = stocks.find((item) => item.id === Number(manageExpenseForm.stock_item_id));
+      await api('/expenses', {
+        method: 'POST',
+        body: JSON.stringify({
+          ...manageExpenseForm,
+          category: stock?.name || 'Stock Purchase',
+          created_by_user_id: currentUser?.id
+        })
+      });
+      setManageExpenseForm({
+        stock_item_id: '',
+        expense_date: new Date().toISOString().slice(0, 10),
+        amount: '',
+        description: '',
+        payment_method: 'cash'
+      });
+      await loadManageExpenses();
+      setMessage('Stock expense added.');
+    } catch (error) {
+      setMessage(error.message);
+    }
+  };
+
+  const deleteManageExpense = async (expense) => {
+    if (!window.confirm(`Delete the ${expense.stock_item_name || expense.category} expense?`)) return;
+    try {
+      await api(`/expenses/${expense.id}`, { method: 'DELETE' });
+      await loadManageExpenses();
+      setMessage('Expense deleted.');
+    } catch (error) {
+      setMessage(error.message);
+    }
+  };
+
   const submitUser = async (event) => {
     event.preventDefault();
     try {
@@ -1377,6 +1429,11 @@ function Manage({ categories, products, stocks, reload, setMessage }) {
     `${product.name} ${product.category_name} ${product.recipe.map((recipe) => recipe.name).join(' ')}`.toLowerCase().includes(recipeSearch.toLowerCase())
   );
 
+  const filteredManageExpenses = manageExpenses.filter((expense) => {
+    const text = `${expense.stock_item_name || ''} ${expense.category} ${expense.description} ${expense.expense_date} ${expense.payment_method} ${expense.created_by_name || ''}`.toLowerCase();
+    return text.includes(manageExpenseSearch.toLowerCase());
+  });
+
   const filteredOrders = orders.filter((order) => {
     const orderDate = new Date(order.created_at);
     const dateText = `${orderDate.toISOString().slice(0, 10)} ${orderDate.toLocaleDateString()} ${orderDate.toLocaleString()}`;
@@ -1395,6 +1452,7 @@ function Manage({ categories, products, stocks, reload, setMessage }) {
           <button className={manageTab === 'products' ? 'active' : ''} onClick={() => setManageTab('products')}><PackagePlus size={20} /> Products</button>
           <button className={manageTab === 'stocks' ? 'active' : ''} onClick={() => setManageTab('stocks')}><Boxes size={20} /> Stocks</button>
           <button className={manageTab === 'recipes' ? 'active' : ''} onClick={() => setManageTab('recipes')}><ClipboardList size={20} /> Product Stock Recipe</button>
+          <button className={manageTab === 'expenses' ? 'active' : ''} onClick={() => setManageTab('expenses')}><Wallet size={20} /> Expenses</button>
           <button className={manageTab === 'orders' ? 'active' : ''} onClick={() => setManageTab('orders')}><ReceiptText size={20} /> Manage Order</button>
           <button className={manageTab === 'accounts' ? 'active' : ''} onClick={() => setManageTab('accounts')}><UserRound size={20} /> Accounts</button>
         </div>
@@ -1637,6 +1695,70 @@ function Manage({ categories, products, stocks, reload, setMessage }) {
         </section>
       )}
 
+      {manageTab === 'expenses' && (
+        <section className="manage-panel full">
+          <div className="panel-heading">
+            <div>
+              <h2>Stock Expenses</h2>
+              <span>{filteredManageExpenses.length} purchase expense{filteredManageExpenses.length === 1 ? '' : 's'}</span>
+            </div>
+          </div>
+
+          <form className="inline-form manage-expense-form" onSubmit={submitManageExpense}>
+            <label className="form-field">
+              <span>Stock Item</span>
+              <select required value={manageExpenseForm.stock_item_id} onChange={(event) => setManageExpenseForm({ ...manageExpenseForm, stock_item_id: event.target.value })}>
+                <option value="">Select stock item</option>
+                {stocks.map((stock) => <option value={stock.id} key={stock.id}>{stock.name}</option>)}
+              </select>
+            </label>
+            <label className="form-field">
+              <span>Date Purchased</span>
+              <input required type="date" value={manageExpenseForm.expense_date} onChange={(event) => setManageExpenseForm({ ...manageExpenseForm, expense_date: event.target.value })} />
+            </label>
+            <label className="form-field">
+              <span>Purchase Price</span>
+              <input required type="number" min="0.01" step="0.01" value={manageExpenseForm.amount} onChange={(event) => setManageExpenseForm({ ...manageExpenseForm, amount: event.target.value })} placeholder="0.00" />
+            </label>
+            <label className="form-field">
+              <span>Payment</span>
+              <select value={manageExpenseForm.payment_method} onChange={(event) => setManageExpenseForm({ ...manageExpenseForm, payment_method: event.target.value })}>
+                <option value="cash">Cash</option>
+                <option value="gcash">GCash</option>
+                <option value="maya">Maya</option>
+              </select>
+            </label>
+            <label className="form-field">
+              <span>Description (Optional)</span>
+              <input value={manageExpenseForm.description} onChange={(event) => setManageExpenseForm({ ...manageExpenseForm, description: event.target.value })} placeholder="Supplier, receipt, notes" />
+            </label>
+            <button><PlusCircle size={18} /> Add Expense</button>
+          </form>
+
+          <div className="toolbar single">
+            <label className="search-field"><span>Search Expenses</span><div><Search size={18} /><input value={manageExpenseSearch} onChange={(event) => setManageExpenseSearch(event.target.value)} placeholder="Search stock, date, payment, description" /></div></label>
+          </div>
+
+          <div className="data-table manage-expenses-table">
+            <div className="table-head"><span>Stock Item</span><span>Date Purchased</span><span>Description</span><span>Payment</span><span>Price</span><span>Added By</span><span>Actions</span></div>
+            {filteredManageExpenses.length === 0 && <p className="empty">No stock expenses found.</p>}
+            {filteredManageExpenses.map((expense) => (
+              <div className="table-row" key={expense.id}>
+                <strong>{expense.stock_item_name || expense.category}</strong>
+                <span>{expense.expense_date}</span>
+                <span>{expense.description || 'No description'}</span>
+                <span>{String(expense.payment_method || '').toUpperCase()}</span>
+                <span>{money(expense.amount)}</span>
+                <span>{expense.created_by_name || 'Unknown'}</span>
+                <div className="row-actions">
+                  <button className="danger-btn" title="Delete expense" onClick={() => deleteManageExpense(expense)}><Archive size={17} /></button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       {manageTab === 'orders' && (
         <section className="manage-panel full">
           <div className="panel-heading">
@@ -1805,6 +1927,7 @@ function Receipt({ receipt }) {
       <p className="receipt-subtitle">POS Receipt</p>
       <p>{receipt.receipt_no}</p>
       <p>{new Date().toLocaleString()}</p>
+      <div className="receipt-gap" />
       <div className="receipt-rule" />
       {receipt.items.map((item) => (
         <div className="receipt-row" key={item.product_id}>
@@ -1814,7 +1937,8 @@ function Receipt({ receipt }) {
       ))}
       <div className="receipt-rule" />
       <div className="receipt-row strong"><span>Total</span><span>{receiptMoney(receipt.total)}</span></div>
-      <div className="receipt-row"><span>Payment</span><span>{receipt.payment_method.toUpperCase()}</span></div>
+      <div className="receipt-gap small" />
+      <div className="receipt-row strong payment-row"><span>Payment</span><span>{receipt.payment_method.toUpperCase()}</span></div>
       {receipt.payment_breakdown &&
         Object.entries(paymentLabels).map(([method, label]) =>
           Number(receipt.payment_breakdown[method] || 0) > 0 ? (

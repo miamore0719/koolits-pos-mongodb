@@ -1633,6 +1633,11 @@ select {
   grid-template-columns: 1.1fr 1fr minmax(220px, 1.7fr) 0.7fr 0.7fr 115px 120px;
 }
 
+.manage-expenses-table .table-head,
+.manage-expenses-table .table-row {
+  grid-template-columns: 1.2fr 1fr minmax(180px, 1.4fr) 0.7fr 0.8fr 1fr 70px;
+}
+
 .orders-table .table-row.cancelled {
   opacity: 0.68;
 }
@@ -2298,6 +2303,14 @@ select {
     margin: 3px 0;
   }
 
+  .receipt-gap {
+    height: 4px;
+  }
+
+  .receipt-gap.small {
+    height: 3px;
+  }
+
   .receipt-row {
     display: flex;
     justify-content: space-between;
@@ -2319,5 +2332,9 @@ select {
   .receipt-row.strong {
     font-size: 10px;
     font-weight: 900;
+  }
+
+  .receipt-row.payment-row {
+    margin-bottom: 3px;
   }
 }

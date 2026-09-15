@@ -710,22 +710,44 @@ app.get('/api/dashboard', async (req, res, next) => {
 
 app.post('/api/expenses', async (req, res, next) => {
   try {
-    const { expense_date, category, description = '', amount, payment_method = 'cash', created_by_user_id = null } = req.body;
-    if (!expense_date || !category?.trim() || Number(amount) <= 0) {
+    const { expense_date, category, description = '', amount, payment_method = 'cash', created_by_user_id = null, stock_item_id = null } = req.body;
+    const stockItemId = stock_item_id ? Number(stock_item_id) : null;
+    const stockItem = stockItemId ? await db.collection('stock_items').findOne({ id: stockItemId }) : null;
+    const expenseCategory = category?.trim() || stockItem?.name || '';
+    if (!expense_date || !expenseCategory || Number(amount) <= 0) {
       return res.status(400).json({ message: 'Expense date, category, and amount are required.' });
     }
     const expense = {
       id: await nextId('expenses'),
       expense_date,
-      category: category.trim(),
+      category: expenseCategory,
       description: description.trim(),
       amount: Number(amount),
       payment_method,
+      stock_item_id: stockItemId,
+      stock_item_name: stockItem?.name || null,
       created_by_user_id: created_by_user_id ? Number(created_by_user_id) : null,
       created_at: new Date()
     };
     await db.collection('expenses').insertOne(expense);
     ok(res, { id: expense.id });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get('/api/expenses', async (req, res, next) => {
+  try {
+    const limit = Math.min(500, Math.max(1, Number(req.query.limit || 100)));
+    const [expenses, users] = await Promise.all([
+      db.collection('expenses').find().sort({ expense_date: -1, created_at: -1 }).limit(limit).toArray(),
+      db.collection('users').find().toArray()
+    ]);
+    const userMap = new Map(users.map((user) => [user.id, user]));
+    ok(res, expenses.map((expense) => ({
+      ...expense,
+      created_by_name: userMap.get(expense.created_by_user_id)?.display_name || null
+    })));
   } catch (error) {
     next(error);
   }
