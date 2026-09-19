@@ -157,7 +157,7 @@ function App() {
   const [productSearch, setProductSearch] = useState('');
   const [payments, setPayments] = useState({ cash: '', gcash: '' });
   const [saleDate, setSaleDate] = useState(new Date().toISOString().slice(0, 10));
-  const [shouldPrint, setShouldPrint] = useState(true);
+  const [shouldPrint, setShouldPrint] = useState(false);
   const [showRecentOrders, setShowRecentOrders] = useState(false);
   const [recentOrders, setRecentOrders] = useState([]);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
