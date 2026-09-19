@@ -9,6 +9,7 @@ import {
   CreditCard,
   Edit3,
   Layers,
+  LogIn,
   LogOut,
   PackagePlus,
   Plus,
@@ -1267,6 +1268,9 @@ function Manage({ categories, products, stocks, reload, setMessage, currentUser 
   const [users, setUsers] = useState([]);
   const [userForm, setUserForm] = useState({ username: '', display_name: '', password: '', role: 'seller' });
   const [editingUserId, setEditingUserId] = useState(null);
+  const [loginLogs, setLoginLogs] = useState([]);
+  const [loginLogDate, setLoginLogDate] = useState(new Date().toISOString().slice(0, 10));
+  const [loginLogSearch, setLoginLogSearch] = useState('');
 
   const loadUsers = async () => {
     const data = await api('/users');
@@ -1283,11 +1287,18 @@ function Manage({ categories, products, stocks, reload, setMessage, currentUser 
     setManageExpenses(data);
   };
 
+  const loadLoginLogs = async () => {
+    const dateQuery = loginLogDate ? `?date=${encodeURIComponent(loginLogDate)}` : '';
+    const data = await api(`/login-logs${dateQuery}`);
+    setLoginLogs(data);
+  };
+
   useEffect(() => {
     if (manageTab === 'accounts') loadUsers().catch((error) => setMessage(error.message));
     if (manageTab === 'orders') loadOrders().catch((error) => setMessage(error.message));
     if (manageTab === 'expenses') loadManageExpenses().catch((error) => setMessage(error.message));
-  }, [manageTab]);
+    if (manageTab === 'login-logs') loadLoginLogs().catch((error) => setMessage(error.message));
+  }, [manageTab, loginLogDate]);
 
   const save = async (path, form, reset) => {
     try {
@@ -1567,6 +1578,10 @@ function Manage({ categories, products, stocks, reload, setMessage, currentUser 
     return text.includes(orderSearch.toLowerCase());
   });
 
+  const filteredLoginLogs = loginLogs.filter((log) =>
+    `${log.display_name || ''} ${log.username || ''}`.toLowerCase().includes(loginLogSearch.toLowerCase())
+  );
+
   return (
     <main className="manage-shell">
       <section className="manage-hero">
@@ -1581,6 +1596,7 @@ function Manage({ categories, products, stocks, reload, setMessage, currentUser 
           <button className={manageTab === 'expenses' ? 'active' : ''} onClick={() => setManageTab('expenses')}><Wallet size={20} /> Expenses</button>
           <button className={manageTab === 'orders' ? 'active' : ''} onClick={() => setManageTab('orders')}><ReceiptText size={20} /> Manage Order</button>
           <button className={manageTab === 'accounts' ? 'active' : ''} onClick={() => setManageTab('accounts')}><UserRound size={20} /> Accounts</button>
+          <button className={manageTab === 'login-logs' ? 'active' : ''} onClick={() => setManageTab('login-logs')}><LogIn size={20} /> Login Logs</button>
         </div>
       </section>
 
@@ -1983,6 +1999,44 @@ function Manage({ categories, products, stocks, reload, setMessage, currentUser 
                 </div>
               </div>
             ))}
+          </div>
+        </section>
+      )}
+
+      {manageTab === 'login-logs' && (
+        <section className="manage-panel full">
+          <div className="panel-heading">
+            <div>
+              <h2>Seller Login Logs</h2>
+              <span>{filteredLoginLogs.length} login{filteredLoginLogs.length === 1 ? '' : 's'} found</span>
+            </div>
+          </div>
+
+          <div className="toolbar login-log-toolbar">
+            <label className="search-field">
+              <span>Search Seller</span>
+              <div><Search size={18} /><input value={loginLogSearch} onChange={(event) => setLoginLogSearch(event.target.value)} placeholder="Search name or username" /></div>
+            </label>
+            <label className="form-field">
+              <span>Login Date</span>
+              <input type="date" value={loginLogDate} onChange={(event) => setLoginLogDate(event.target.value)} />
+            </label>
+          </div>
+
+          <div className="data-table login-logs-table">
+            <div className="table-head"><span>Seller</span><span>Username</span><span>Date</span><span>Time</span></div>
+            {filteredLoginLogs.length === 0 && <p className="empty">No seller logins found for this date.</p>}
+            {filteredLoginLogs.map((log) => {
+              const loginTime = new Date(log.login_at);
+              return (
+                <div className="table-row" key={log.id}>
+                  <strong>{log.display_name}</strong>
+                  <span>{log.username}</span>
+                  <span>{loginTime.toLocaleDateString()}</span>
+                  <span>{loginTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+                </div>
+              );
+            })}
           </div>
         </section>
       )}

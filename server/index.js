@@ -125,7 +125,40 @@ app.post('/api/auth/login', async (req, res, next) => {
     if (!user || !verifyPassword(password, user.password_hash)) {
       return res.status(401).json({ message: 'Invalid username or password.' });
     }
+    if (user.role === 'seller') {
+      const loginAt = new Date();
+      const loginDate = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Manila',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      }).format(loginAt);
+      await db.collection('login_logs').insertOne({
+        id: await nextId('login_logs'),
+        user_id: user.id,
+        username: user.username,
+        display_name: user.display_name,
+        role: user.role,
+        login_date: loginDate,
+        login_at: loginAt
+      });
+    }
     ok(res, { id: user.id, username: user.username, display_name: user.display_name, role: user.role });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get('/api/login-logs', async (req, res, next) => {
+  try {
+    const query = { role: 'seller' };
+    if (req.query.date) query.login_date = String(req.query.date);
+    const logs = await db.collection('login_logs')
+      .find(query)
+      .sort({ login_at: -1 })
+      .limit(1000)
+      .toArray();
+    ok(res, logs);
   } catch (error) {
     next(error);
   }

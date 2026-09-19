@@ -1772,6 +1772,15 @@ select {
   width: auto;
 }
 
+.login-log-toolbar {
+  align-items: end;
+}
+
+.login-logs-table .table-head,
+.login-logs-table .table-row {
+  grid-template-columns: minmax(180px, 1.2fr) minmax(140px, 1fr) minmax(130px, 0.8fr) minmax(130px, 0.8fr);
+}
+
 .panel-heading.compact {
   margin-bottom: 4px;
 }
