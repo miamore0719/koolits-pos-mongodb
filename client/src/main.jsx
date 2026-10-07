@@ -1670,7 +1670,14 @@ function Manage({ categories, products, stocks, reload, setMessage, currentUser 
     return matchesCategory && text.includes(productSearch.toLowerCase());
   });
 
-  const filteredStocks = stocks.filter((stock) => `${stock.name} ${stock.unit}`.toLowerCase().includes(stockSearch.toLowerCase()));
+  const filteredStocks = stocks
+    .filter((stock) => `${stock.name} ${stock.unit}`.toLowerCase().includes(stockSearch.toLowerCase()))
+    .sort((a, b) => {
+      const aLow = Number(a.quantity_on_hand) <= Number(a.reorder_level);
+      const bLow = Number(b.quantity_on_hand) <= Number(b.reorder_level);
+      if (aLow !== bLow) return aLow ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    });
 
   const filteredRecipeProducts = products.filter((product) =>
     `${product.name} ${product.category_name} ${product.recipe.map((recipe) => recipe.name).join(' ')}`.toLowerCase().includes(recipeSearch.toLowerCase())
