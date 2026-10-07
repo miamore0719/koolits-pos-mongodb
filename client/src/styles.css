@@ -950,7 +950,7 @@ select {
 .overview-grid {
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   margin-bottom: 16px;
 }
 
@@ -991,6 +991,12 @@ select {
   background: linear-gradient(135deg, rgba(218, 82, 68, 0.26), rgba(255, 255, 255, 0.06));
   border-color: rgba(255, 139, 112, 0.58);
   box-shadow: inset 5px 0 0 #ff8b70, 0 12px 32px rgba(0, 0, 0, 0.14);
+}
+
+.gcash-card {
+  background: linear-gradient(135deg, rgba(34, 126, 214, 0.28), rgba(255, 255, 255, 0.06));
+  border-color: rgba(79, 174, 255, 0.65);
+  box-shadow: inset 5px 0 0 #4faeff, 0 12px 32px rgba(0, 0, 0, 0.14);
 }
 
 .net-card {

@@ -48,6 +48,7 @@ const ingredientStockNames = [
 ];
 const normalizeStockName = (value) => String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 const ingredientStockKeys = new Set(ingredientStockNames.map(normalizeStockName));
+const saleGcashAmount = (sale) => Number(sale.payment_breakdown?.gcash ?? (sale.payment_method === 'gcash' ? sale.total : 0));
 
 const weekStart = (value) => {
   const [year, month, day] = value.split('-').map(Number);
@@ -875,10 +876,8 @@ app.get('/api/dashboard', async (req, res, next) => {
     const summary = {
       sales_total: salesAll.reduce((sum, sale) => sum + Number(sale.total || 0), 0),
       sales_count: salesAll.length,
-      gcash_total: salesAll.reduce((sum, sale) => {
-        const gcashAmount = sale.payment_breakdown?.gcash;
-        return sum + Number(gcashAmount ?? (sale.payment_method === 'gcash' ? sale.total : 0));
-      }, 0),
+      gcash_total: salesAll.reduce((sum, sale) => sum + saleGcashAmount(sale), 0),
+      gcash_count: salesAll.filter((sale) => saleGcashAmount(sale) > 0).length,
       cancelled_count: cancelledSales.length,
       cancelled_total: cancelledSales.reduce((sum, sale) => sum + Number(sale.total || 0), 0),
       expense_total: expensesAll.reduce((sum, expense) => sum + Number(expense.amount || 0), 0),
@@ -888,9 +887,10 @@ app.get('/api/dashboard', async (req, res, next) => {
     const salesDayMap = new Map();
     for (const sale of salesAll) {
       const key = new Date(sale.created_at).toISOString().slice(0, 10);
-      const current = salesDayMap.get(key) || { business_date: key, sales_total: 0, sales_count: 0 };
+      const current = salesDayMap.get(key) || { business_date: key, sales_total: 0, sales_count: 0, gcash_total: 0 };
       current.sales_total += Number(sale.total || 0);
       current.sales_count += 1;
+      current.gcash_total += saleGcashAmount(sale);
       salesDayMap.set(key, current);
     }
     const expenseDayMap = new Map();
@@ -909,9 +909,10 @@ app.get('/api/dashboard', async (req, res, next) => {
         business_date: current,
         sales_total: Number(daySales?.sales_total || 0),
         sales_count: Number(daySales?.sales_count || 0),
+        gcash_total: Number(daySales?.gcash_total || 0),
         expense_total: Number(dayExpenses?.expense_total || 0),
         expense_count: Number(dayExpenses?.expense_count || 0),
-        net_total: Number(daySales?.sales_total || 0) - Number(dayExpenses?.expense_total || 0),
+        net_total: Number(daySales?.sales_total || 0) - Number(dayExpenses?.expense_total || 0) - Number(daySales?.gcash_total || 0),
         remittance: remittanceDayMap.get(current) || null
       });
     }
@@ -940,7 +941,7 @@ app.get('/api/dashboard', async (req, res, next) => {
       start,
       end,
       range_end: period === 'range' ? req.query.end_date || start : null,
-      summary: { ...summary, net_total: summary.sales_total - summary.expense_total },
+      summary: { ...summary, net_total: summary.sales_total - summary.expense_total - summary.gcash_total },
       sales,
       expenses,
       remittances,

@@ -742,7 +742,7 @@ function Dashboard({ setMessage, currentUser }) {
     }
   };
 
-  const summary = dashboard?.summary || { sales_total: 0, sales_count: 0, expense_total: 0, expense_count: 0, net_total: 0 };
+  const summary = dashboard?.summary || { sales_total: 0, sales_count: 0, expense_total: 0, expense_count: 0, gcash_total: 0, gcash_count: 0, net_total: 0 };
   const dailyChart = dashboard?.daily_sales || [];
   const monthlyChart = dashboard?.monthly_sales || [];
   const showingDailyTotals = period !== 'day';
@@ -812,10 +812,15 @@ function Dashboard({ setMessage, currentUser }) {
           <strong>{money(summary.expense_total)}</strong>
           <small>{summary.expense_count} record{summary.expense_count === 1 ? '' : 's'}</small>
         </article>
+        <article className="overview-card gcash-card">
+          <span>{period === 'month' ? 'Monthly GCash' : period === 'range' ? 'Range GCash' : 'Daily GCash'}</span>
+          <strong>{money(summary.gcash_total)}</strong>
+          <small>{summary.gcash_count} payment{summary.gcash_count === 1 ? '' : 's'}</small>
+        </article>
         <article className={`overview-card ${summary.net_total >= 0 ? 'net-card' : 'expense-card'}`}>
           <span>{period === 'month' ? 'Monthly Net' : period === 'range' ? 'Net In Range' : 'Daily Net'}</span>
           <strong>{money(summary.net_total)}</strong>
-          <small>Sales minus expenses</small>
+          <small>Sales minus expenses and GCash</small>
         </article>
       </section>
 
