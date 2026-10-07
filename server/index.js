@@ -875,6 +875,10 @@ app.get('/api/dashboard', async (req, res, next) => {
     const summary = {
       sales_total: salesAll.reduce((sum, sale) => sum + Number(sale.total || 0), 0),
       sales_count: salesAll.length,
+      gcash_total: salesAll.reduce((sum, sale) => {
+        const gcashAmount = sale.payment_breakdown?.gcash;
+        return sum + Number(gcashAmount ?? (sale.payment_method === 'gcash' ? sale.total : 0));
+      }, 0),
       cancelled_count: cancelledSales.length,
       cancelled_total: cancelledSales.reduce((sum, sale) => sum + Number(sale.total || 0), 0),
       expense_total: expensesAll.reduce((sum, expense) => sum + Number(expense.amount || 0), 0),

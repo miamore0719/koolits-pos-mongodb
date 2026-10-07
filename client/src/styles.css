@@ -336,7 +336,7 @@ button {
 .seller-summary-row {
   display: grid;
   gap: 8px;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
 .seller-summary-card {
@@ -379,6 +379,14 @@ button {
 
 .seller-summary-card.expenses strong {
   color: #ff7373;
+}
+
+.seller-summary-card.gcash {
+  border-color: rgba(79, 174, 255, 0.75);
+}
+
+.seller-summary-card.gcash strong {
+  color: #70bdff;
 }
 
 .seller-summary-card.net {

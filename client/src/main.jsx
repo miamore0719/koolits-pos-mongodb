@@ -173,7 +173,7 @@ function App() {
   const [saleToast, setSaleToast] = useState('');
   const [lastReceipt, setLastReceipt] = useState(null);
   const [pendingPrint, setPendingPrint] = useState(false);
-  const [sellerSummary, setSellerSummary] = useState({ sales_total: 0, cancelled_total: 0, expense_total: 0, net_total: 0 });
+  const [sellerSummary, setSellerSummary] = useState({ sales_total: 0, cancelled_total: 0, expense_total: 0, gcash_total: 0, net_total: 0 });
   const today = new Date().toISOString().slice(0, 10);
 
   const loadData = async () => {
@@ -219,11 +219,13 @@ function App() {
     const completedSales = Number(data?.summary?.sales_total || 0);
     const cancelledTotal = Number(data?.summary?.cancelled_total || 0);
     const expenses = Number(data?.summary?.expense_total || 0);
+    const gcashTotal = Number(data?.summary?.gcash_total || 0);
     setSellerSummary({
       sales_total: completedSales + cancelledTotal,
       cancelled_total: cancelledTotal,
       expense_total: expenses,
-      net_total: completedSales - expenses
+      gcash_total: gcashTotal,
+      net_total: completedSales - expenses - gcashTotal
     });
   };
 
@@ -402,6 +404,10 @@ function App() {
                   <article className="seller-summary-card expenses">
                     <span>Expenses</span>
                     <strong>{money(sellerSummary.expense_total)}</strong>
+                  </article>
+                  <article className="seller-summary-card gcash">
+                    <span>GCash</span>
+                    <strong>{money(sellerSummary.gcash_total)}</strong>
                   </article>
                   <article className="seller-summary-card net">
                     <span>Net Sales</span>
