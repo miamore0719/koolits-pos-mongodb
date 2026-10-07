@@ -373,8 +373,12 @@ button {
   color: #ff7373;
 }
 
+.seller-summary-card.expenses {
+  border-color: rgba(255, 93, 93, 0.75);
+}
+
 .seller-summary-card.expenses strong {
-  color: #ffc36d;
+  color: #ff7373;
 }
 
 .seller-summary-card.net {
