@@ -32,6 +32,13 @@ const signedMoney = (value) => `${Number(value || 0) < 0 ? '-' : ''}₱${Math.ab
 const receiptMoney = (value) => `P${Number(value || 0).toFixed(2)}`;
 const paymentLabels = { cash: 'Cash', gcash: 'GCash' };
 const quantityText = (value) => Number(value || 0).toLocaleString(undefined, { maximumFractionDigits: 3 });
+const stockAlertLevel = (stock) => {
+  const quantity = Number(stock.quantity_on_hand || 0);
+  const reorderLevel = Number(stock.reorder_level || 0);
+  if (quantity <= reorderLevel) return 'low';
+  if (reorderLevel > 0 && quantity <= reorderLevel * 1.1) return 'near';
+  return '';
+};
 
 const sortWithOthersLast = (items) =>
   [...items].sort((a, b) => {
@@ -1673,9 +1680,9 @@ function Manage({ categories, products, stocks, reload, setMessage, currentUser 
   const filteredStocks = stocks
     .filter((stock) => `${stock.name} ${stock.unit}`.toLowerCase().includes(stockSearch.toLowerCase()))
     .sort((a, b) => {
-      const aLow = Number(a.quantity_on_hand) <= Number(a.reorder_level);
-      const bLow = Number(b.quantity_on_hand) <= Number(b.reorder_level);
-      if (aLow !== bLow) return aLow ? -1 : 1;
+      const rank = { low: 0, near: 1, '': 2 };
+      const rankDifference = rank[stockAlertLevel(a)] - rank[stockAlertLevel(b)];
+      if (rankDifference) return rankDifference;
       return a.name.localeCompare(b.name);
     });
 
@@ -1904,7 +1911,7 @@ function Manage({ categories, products, stocks, reload, setMessage, currentUser 
             <div className="data-table stock-data-table">
               <div className="table-head"><span>Stock Item</span><span>Stock Quantity</span><span>Unit of Measure</span><span>Reorder</span><span>Actions</span></div>
               {filteredStocks.map((stock) => (
-                <div className={`table-row ${stock.quantity_on_hand <= stock.reorder_level ? 'low' : ''}`} key={stock.id}>
+                <div className={`table-row ${stockAlertLevel(stock)}`} key={stock.id}>
                   <strong>{stock.name}</strong>
                   <span>{Number(stock.quantity_on_hand).toLocaleString()}</span>
                   <span>{stock.unit}</span>

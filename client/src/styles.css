@@ -1911,7 +1911,14 @@ select {
 }
 
 .table-row.low {
-  border-color: rgba(232, 155, 60, 0.7);
+  background: rgba(203, 61, 61, 0.2);
+  border-color: rgba(255, 102, 102, 0.9);
+  box-shadow: inset 4px 0 0 #ff5d5d;
+}
+
+.table-row.near {
+  background: rgba(232, 155, 60, 0.16);
+  border-color: rgba(232, 155, 60, 0.8);
   box-shadow: inset 4px 0 0 var(--secondary);
 }
 
