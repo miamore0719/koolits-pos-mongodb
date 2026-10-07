@@ -868,10 +868,11 @@ app.get('/api/dashboard', async (req, res, next) => {
     const startDate = dateStart(start);
     const endDate = dateStart(end);
 
-    const [salesAll, cancelledSales, expensesAll, remittances, users] = await Promise.all([
+    const [salesAll, cancelledSales, expensesAll, miscellaneousAll, remittances, users] = await Promise.all([
       db.collection('sales').find({ created_at: { $gte: startDate, $lt: endDate }, status: { $ne: 'cancelled' } }).sort({ created_at: -1 }).toArray(),
       db.collection('sales').find({ created_at: { $gte: startDate, $lt: endDate }, status: 'cancelled' }).toArray(),
       db.collection('expenses').find({ expense_date: { $gte: start, $lt: end } }).sort({ expense_date: -1, created_at: -1 }).toArray(),
+      db.collection('miscellaneous').find({ miscellaneous_date: { $gte: start, $lt: end } }).sort({ miscellaneous_date: -1, created_at: -1 }).toArray(),
       db.collection('remittances').find({ business_date: { $gte: start, $lt: end } }).sort({ business_date: -1 }).toArray(),
       db.collection('users').find().toArray()
     ]);
@@ -894,6 +895,13 @@ app.get('/api/dashboard', async (req, res, next) => {
       const user = userMap.get(expense.created_by_user_id);
       return { ...expense, created_by_name: user?.display_name || null, created_by_role: user?.role || null };
     });
+    const miscellaneous = (searchText
+      ? miscellaneousAll.filter((item) => {
+          const user = userMap.get(item.created_by_user_id);
+          return searchRegex.test(item.description) || searchRegex.test(user?.display_name || '');
+        })
+      : miscellaneousAll
+    ).map((item) => ({ ...item, created_by_name: userMap.get(item.created_by_user_id)?.display_name || null }));
 
     const summary = {
       sales_total: salesAll.reduce((sum, sale) => sum + Number(sale.total || 0), 0),
@@ -903,7 +911,9 @@ app.get('/api/dashboard', async (req, res, next) => {
       cancelled_count: cancelledSales.length,
       cancelled_total: cancelledSales.reduce((sum, sale) => sum + Number(sale.total || 0), 0),
       expense_total: expensesAll.reduce((sum, expense) => sum + Number(expense.amount || 0), 0),
-      expense_count: expensesAll.length
+      expense_count: expensesAll.length,
+      miscellaneous_total: miscellaneousAll.reduce((sum, item) => sum + Number(item.amount || 0), 0),
+      miscellaneous_count: miscellaneousAll.length
     };
 
     const salesDayMap = new Map();
@@ -922,11 +932,19 @@ app.get('/api/dashboard', async (req, res, next) => {
       current.expense_count += 1;
       expenseDayMap.set(expense.expense_date, current);
     }
+    const miscellaneousDayMap = new Map();
+    for (const item of miscellaneousAll) {
+      const current = miscellaneousDayMap.get(item.miscellaneous_date) || { miscellaneous_total: 0, miscellaneous_count: 0 };
+      current.miscellaneous_total += Number(item.amount || 0);
+      current.miscellaneous_count += 1;
+      miscellaneousDayMap.set(item.miscellaneous_date, current);
+    }
     const remittanceDayMap = new Map(remittances.map((row) => [row.business_date, row]));
     const daily_sales = [];
     for (let current = start; current < end; current = addDays(current, 1)) {
       const daySales = salesDayMap.get(current);
       const dayExpenses = expenseDayMap.get(current);
+      const dayMiscellaneous = miscellaneousDayMap.get(current);
       daily_sales.push({
         business_date: current,
         sales_total: Number(daySales?.sales_total || 0),
@@ -934,7 +952,9 @@ app.get('/api/dashboard', async (req, res, next) => {
         gcash_total: Number(daySales?.gcash_total || 0),
         expense_total: Number(dayExpenses?.expense_total || 0),
         expense_count: Number(dayExpenses?.expense_count || 0),
-        net_total: Number(daySales?.sales_total || 0) - Number(dayExpenses?.expense_total || 0) - Number(daySales?.gcash_total || 0),
+        miscellaneous_total: Number(dayMiscellaneous?.miscellaneous_total || 0),
+        miscellaneous_count: Number(dayMiscellaneous?.miscellaneous_count || 0),
+        net_total: Number(daySales?.sales_total || 0) + Number(dayMiscellaneous?.miscellaneous_total || 0) - Number(dayExpenses?.expense_total || 0) - Number(daySales?.gcash_total || 0),
         remittance: remittanceDayMap.get(current) || null
       });
     }
@@ -963,9 +983,10 @@ app.get('/api/dashboard', async (req, res, next) => {
       start,
       end,
       range_end: period === 'range' ? req.query.end_date || start : null,
-      summary: { ...summary, net_total: summary.sales_total - summary.expense_total - summary.gcash_total },
+      summary: { ...summary, net_total: summary.sales_total + summary.miscellaneous_total - summary.expense_total - summary.gcash_total },
       sales,
       expenses,
+      miscellaneous,
       remittances,
       daily_sales,
       monthly_sales,
@@ -1048,6 +1069,42 @@ app.delete('/api/expenses/:id', async (req, res, next) => {
   try {
     const id = Number(req.params.id);
     await db.collection('expenses').deleteOne({ id });
+    ok(res, { id });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post('/api/miscellaneous', async (req, res, next) => {
+  try {
+    const miscellaneousDate = String(req.body.miscellaneous_date || '');
+    const description = String(req.body.description || '').trim();
+    const amount = Number(req.body.amount);
+    const userId = Number(req.body.created_by_user_id);
+    const user = await db.collection('users').findOne({ id: userId, is_active: true, role: 'admin' });
+    if (!user) return res.status(400).json({ message: 'A valid admin account is required.' });
+    if (!miscellaneousDate || !description || amount <= 0) {
+      return res.status(400).json({ message: 'Date, description, and amount are required.' });
+    }
+    const item = {
+      id: await nextId('miscellaneous'),
+      miscellaneous_date: miscellaneousDate,
+      description,
+      amount,
+      created_by_user_id: user.id,
+      created_at: new Date()
+    };
+    await db.collection('miscellaneous').insertOne(item);
+    ok(res, item);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.delete('/api/miscellaneous/:id', async (req, res, next) => {
+  try {
+    const id = Number(req.params.id);
+    await db.collection('miscellaneous').deleteOne({ id });
     ok(res, { id });
   } catch (error) {
     next(error);

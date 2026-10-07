@@ -336,7 +336,7 @@ button {
 .seller-summary-row {
   display: grid;
   gap: 8px;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
 }
 
 .seller-summary-card {
@@ -371,6 +371,14 @@ button {
 
 .seller-summary-card.cancelled strong {
   color: #ff7373;
+}
+
+.seller-summary-card.addons {
+  border-color: rgba(232, 155, 60, 0.75);
+}
+
+.seller-summary-card.addons strong {
+  color: #ffc36d;
 }
 
 .seller-summary-card.expenses {
@@ -1483,6 +1491,30 @@ select {
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   margin-bottom: 14px;
   padding: 12px;
+}
+
+.miscellaneous-panel {
+  margin-top: 16px;
+}
+
+.miscellaneous-total {
+  color: #75e1a3;
+  font-size: 22px;
+}
+
+.miscellaneous-form {
+  background: rgba(91, 211, 142, 0.08);
+  border-color: rgba(91, 211, 142, 0.24);
+}
+
+.miscellaneous-row {
+  background: linear-gradient(135deg, rgba(47, 151, 92, 0.2), rgba(255, 255, 255, 0.07));
+  border-color: rgba(91, 211, 142, 0.42);
+  grid-template-columns: minmax(0, 1fr) auto 64px;
+}
+
+.miscellaneous-row b {
+  color: #75e1a3;
 }
 
 .dashboard-shell input,

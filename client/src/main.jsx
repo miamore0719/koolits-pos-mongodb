@@ -173,7 +173,7 @@ function App() {
   const [saleToast, setSaleToast] = useState('');
   const [lastReceipt, setLastReceipt] = useState(null);
   const [pendingPrint, setPendingPrint] = useState(false);
-  const [sellerSummary, setSellerSummary] = useState({ sales_total: 0, cancelled_total: 0, expense_total: 0, gcash_total: 0, net_total: 0 });
+  const [sellerSummary, setSellerSummary] = useState({ sales_total: 0, miscellaneous_total: 0, cancelled_total: 0, expense_total: 0, gcash_total: 0, net_total: 0 });
   const today = new Date().toISOString().slice(0, 10);
 
   const loadData = async () => {
@@ -220,12 +220,14 @@ function App() {
     const cancelledTotal = Number(data?.summary?.cancelled_total || 0);
     const expenses = Number(data?.summary?.expense_total || 0);
     const gcashTotal = Number(data?.summary?.gcash_total || 0);
+    const miscellaneousTotal = Number(data?.summary?.miscellaneous_total || 0);
     setSellerSummary({
       sales_total: completedSales + cancelledTotal,
+      miscellaneous_total: miscellaneousTotal,
       cancelled_total: cancelledTotal,
       expense_total: expenses,
       gcash_total: gcashTotal,
-      net_total: completedSales - expenses - gcashTotal
+      net_total: completedSales + miscellaneousTotal - expenses - gcashTotal
     });
   };
 
@@ -396,6 +398,10 @@ function App() {
                   <article className="seller-summary-card sales">
                     <span>Today's Sales</span>
                     <strong>{money(sellerSummary.sales_total)}</strong>
+                  </article>
+                  <article className="seller-summary-card addons">
+                    <span>Add-ons</span>
+                    <strong>{money(sellerSummary.miscellaneous_total)}</strong>
                   </article>
                   <article className="seller-summary-card cancelled">
                     <span>Cancelled Orders</span>
@@ -627,6 +633,11 @@ function Dashboard({ setMessage, currentUser }) {
     amount: '',
     payment_method: 'cash'
   });
+  const [miscellaneousForm, setMiscellaneousForm] = useState({
+    miscellaneous_date: today,
+    description: '',
+    amount: ''
+  });
   const [editingExpenseId, setEditingExpenseId] = useState(null);
   const [remittanceNote, setRemittanceNote] = useState('');
   const [remittanceDate, setRemittanceDate] = useState(today);
@@ -669,6 +680,7 @@ function Dashboard({ setMessage, currentUser }) {
     if (!editingExpenseId) {
       setExpenseForm((current) => ({ ...current, expense_date: period === 'range' ? rangeStart : dashboardDate }));
     }
+    setMiscellaneousForm((current) => ({ ...current, miscellaneous_date: period === 'range' ? rangeStart : dashboardDate }));
   }, [dashboardDate, rangeStart, period, editingExpenseId]);
 
   const resetExpenseForm = () => {
@@ -701,10 +713,40 @@ function Dashboard({ setMessage, currentUser }) {
     }
   };
 
+  const submitMiscellaneous = async (event) => {
+    event.preventDefault();
+    try {
+      await api('/miscellaneous', {
+        method: 'POST',
+        body: JSON.stringify({ ...miscellaneousForm, created_by_user_id: currentUser.id })
+      });
+      setMiscellaneousForm({
+        miscellaneous_date: period === 'range' ? rangeStart : dashboardDate,
+        description: '',
+        amount: ''
+      });
+      await loadDashboard();
+      setMessage('Miscellaneous add-on added.');
+    } catch (error) {
+      setMessage(error.message);
+    }
+  };
+
+  const deleteMiscellaneous = async (item) => {
+    if (!window.confirm(`Delete miscellaneous add-on "${item.description}"?`)) return;
+    try {
+      await api(`/miscellaneous/${item.id}`, { method: 'DELETE' });
+      await loadDashboard();
+      setMessage('Miscellaneous add-on deleted.');
+    } catch (error) {
+      setMessage(error.message);
+    }
+  };
+
   const openRemittanceModal = () => {
     const daysInView = dashboard?.daily_sales || [];
     const eligibleDays = daysInView
-      .filter((day) => !day.remittance && (day.sales_total || day.expense_total))
+      .filter((day) => !day.remittance && (day.sales_total || day.expense_total || day.miscellaneous_total))
       .map((day) => day.business_date);
     const defaultDays = period === 'day' && eligibleDays.includes(dashboardDate) ? [dashboardDate] : eligibleDays;
     setSelectedRemittanceDays(defaultDays);
@@ -742,12 +784,12 @@ function Dashboard({ setMessage, currentUser }) {
     }
   };
 
-  const summary = dashboard?.summary || { sales_total: 0, sales_count: 0, expense_total: 0, expense_count: 0, gcash_total: 0, gcash_count: 0, net_total: 0 };
+  const summary = dashboard?.summary || { sales_total: 0, sales_count: 0, expense_total: 0, expense_count: 0, miscellaneous_total: 0, miscellaneous_count: 0, gcash_total: 0, gcash_count: 0, net_total: 0 };
   const dailyChart = dashboard?.daily_sales || [];
   const monthlyChart = dashboard?.monthly_sales || [];
   const showingDailyTotals = period !== 'day';
   const remittedDays = new Set((dashboard?.remittances || []).map((item) => item.business_date));
-  const activeSalesDays = dailyChart.filter((day) => day.sales_total || day.expense_total);
+  const activeSalesDays = dailyChart.filter((day) => day.sales_total || day.expense_total || day.miscellaneous_total);
   const remittanceDaysInView = period === 'day'
     ? dailyChart.filter((day) => day.business_date === dashboardDate)
     : dailyChart;
@@ -820,7 +862,7 @@ function Dashboard({ setMessage, currentUser }) {
         <article className={`overview-card ${summary.net_total >= 0 ? 'net-card' : 'expense-card'}`}>
           <span>{period === 'month' ? 'Monthly Net' : period === 'range' ? 'Net In Range' : 'Daily Net'}</span>
           <strong>{money(summary.net_total)}</strong>
-          <small>Sales minus expenses and GCash</small>
+          <small>Sales plus add-ons, minus expenses and GCash</small>
         </article>
       </section>
 
@@ -891,7 +933,7 @@ function Dashboard({ setMessage, currentUser }) {
 
       <section className="dashboard-panel">
         <div className="toolbar single">
-          <label className="search-field"><span>Search Sales and Expenses</span><div><Search size={18} /><input value={financeSearch} onChange={(event) => setFinanceSearch(event.target.value)} placeholder="Search receipt, payment, category, description" /></div></label>
+          <label className="search-field"><span>Search Sales, Expenses, and Miscellaneous</span><div><Search size={18} /><input value={financeSearch} onChange={(event) => setFinanceSearch(event.target.value)} placeholder="Search receipt, payment, category, description" /></div></label>
         </div>
       </section>
 
@@ -915,7 +957,7 @@ function Dashboard({ setMessage, currentUser }) {
                   <article className="finance-row sale-row daily-sale-row" key={day.business_date}>
                     <div>
                       <strong>{day.business_date}</strong>
-                      <span>{day.sales_count} order{day.sales_count === 1 ? '' : 's'} · Expenses {money(day.expense_total)} · {day.remittance ? 'Remitted' : 'Not remitted'}</span>
+                      <span>{day.sales_count} order{day.sales_count === 1 ? '' : 's'} · Add-ons {money(day.miscellaneous_total)} · Expenses {money(day.expense_total)} · {day.remittance ? 'Remitted' : 'Not remitted'}</span>
                     </div>
                     <div className="sales-money-columns">
                       <span><small>Gross</small><b>{money(day.sales_total)}</b></span>
@@ -1014,6 +1056,48 @@ function Dashboard({ setMessage, currentUser }) {
             ))}
           </div>
         </section>
+      </section>
+
+      <section className="dashboard-panel miscellaneous-panel">
+        <div className="panel-heading">
+          <div>
+            <h2>Miscellaneous</h2>
+            <span>{dashboard?.miscellaneous?.length || 0} add-on{dashboard?.miscellaneous?.length === 1 ? '' : 's'} in this view</span>
+          </div>
+          <strong className="miscellaneous-total">+{money(summary.miscellaneous_total)}</strong>
+        </div>
+
+        <form className="expense-form miscellaneous-form" onSubmit={submitMiscellaneous}>
+          <label className="form-field">
+            <span>Date</span>
+            <input required type="date" value={miscellaneousForm.miscellaneous_date} onChange={(event) => setMiscellaneousForm({ ...miscellaneousForm, miscellaneous_date: event.target.value })} />
+          </label>
+          <label className="form-field">
+            <span>Description</span>
+            <input required value={miscellaneousForm.description} onChange={(event) => setMiscellaneousForm({ ...miscellaneousForm, description: event.target.value })} placeholder="Additional income or adjustment" />
+          </label>
+          <label className="form-field">
+            <span>Amount</span>
+            <input required type="number" min="0.01" step="0.01" value={miscellaneousForm.amount} onChange={(event) => setMiscellaneousForm({ ...miscellaneousForm, amount: event.target.value })} placeholder="0.00" />
+          </label>
+          <button><PlusCircle size={18} /> Add Miscellaneous</button>
+        </form>
+
+        <div className="finance-list miscellaneous-list">
+          {dashboard?.miscellaneous?.length === 0 && <p className="empty">No miscellaneous add-ons for this filter.</p>}
+          {dashboard?.miscellaneous?.map((item) => (
+            <article className="finance-row miscellaneous-row" key={item.id}>
+              <div>
+                <strong>{item.description}</strong>
+                <span>{item.miscellaneous_date} · Added by {item.created_by_name || 'Admin'}</span>
+              </div>
+              <b>+{money(item.amount)}</b>
+              <div className="row-actions">
+                <button title="Delete miscellaneous add-on" className="danger-btn" onClick={() => deleteMiscellaneous(item)}><Archive size={17} /></button>
+              </div>
+            </article>
+          ))}
+        </div>
       </section>
 
       {showRemittanceModal && (
