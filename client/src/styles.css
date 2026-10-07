@@ -1201,6 +1201,101 @@ select {
   padding: 0 14px;
 }
 
+.ingredients-shell {
+  gap: 16px;
+}
+
+.ingredient-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.ingredient-selected-total {
+  color: var(--secondary);
+  font-size: 16px;
+}
+
+.ingredient-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.ingredient-item {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.07);
+  border: 2px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) 110px;
+  min-height: 86px;
+  padding: 12px;
+}
+
+.ingredient-item > span {
+  display: grid;
+  gap: 5px;
+}
+
+.ingredient-item small,
+.ingredient-history-row span {
+  color: rgba(255, 255, 255, 0.68);
+}
+
+.ingredient-item input {
+  font-size: 18px;
+  font-weight: 800;
+  min-width: 0;
+  text-align: center;
+}
+
+.ingredient-item.missing {
+  opacity: 0.58;
+}
+
+.ingredient-submit {
+  align-items: center;
+  background: linear-gradient(135deg, var(--secondary), var(--secondary-dark));
+  border-radius: 8px;
+  color: var(--primary-dark);
+  display: inline-flex;
+  font-weight: 900;
+  gap: 8px;
+  justify-content: center;
+  justify-self: end;
+  min-height: 48px;
+  padding: 0 18px;
+}
+
+.ingredient-submit:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.ingredient-history-list {
+  display: grid;
+  gap: 8px;
+}
+
+.ingredient-history-row {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  padding: 12px;
+}
+
+.ingredient-history-row > div {
+  display: grid;
+  gap: 4px;
+}
+
+.ingredient-history-row b {
+  color: var(--secondary);
+}
+
 .finance-columns {
   display: grid;
   gap: 16px;

@@ -37,6 +37,17 @@ const addMonths = (value, months) => {
 };
 const dateStart = (value) => new Date(`${value}T00:00:00.000Z`);
 const escapeRegex = (value) => String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const ingredientStockNames = [
+  'Vanilla Ice Cream Mix',
+  'Chocolate Ice Cream Mix',
+  'Bolsita #3',
+  'Bolsita #5',
+  'Bolsita #8',
+  'Take Out Bag (Double)',
+  'Take Out Bag Single'
+];
+const normalizeStockName = (value) => String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+const ingredientStockKeys = new Set(ingredientStockNames.map(normalizeStockName));
 
 const weekStart = (value) => {
   const [year, month, day] = value.split('-').map(Number);
@@ -346,6 +357,104 @@ app.get('/api/stocks', async (_req, res, next) => {
   }
 });
 
+app.get('/api/ingredients', async (_req, res, next) => {
+  try {
+    const stocks = await db.collection('stock_items').find({ is_active: true }).toArray();
+    const stockMap = new Map(stocks.map((stock) => [normalizeStockName(stock.name), stock]));
+    const items = ingredientStockNames.map((name) => {
+      const stock = stockMap.get(normalizeStockName(name));
+      return stock
+        ? { id: stock.id, name: stock.name, unit: stock.unit, quantity_on_hand: stock.quantity_on_hand, available: true }
+        : { id: null, name, unit: 'pcs', quantity_on_hand: 0, available: false };
+    });
+    const today = todayDate();
+    const movements = await db.collection('inventory_movements')
+      .find({ movement_type: 'ingredient_usage', movement_date: today })
+      .sort({ created_at: -1 })
+      .limit(100)
+      .toArray();
+    const stockById = new Map(stocks.map((stock) => [stock.id, stock]));
+    ok(res, {
+      date: today,
+      items,
+      movements: movements.map((movement) => ({
+        ...movement,
+        stock_name: stockById.get(movement.stock_item_id)?.name || 'Unknown Stock',
+        unit: stockById.get(movement.stock_item_id)?.unit || 'pcs'
+      }))
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post('/api/ingredients/deduct', async (req, res, next) => {
+  const applied = [];
+  try {
+    const items = Array.isArray(req.body.items) ? req.body.items : [];
+    const userId = Number(req.body.created_by_user_id);
+    const user = await db.collection('users').findOne({ id: userId, is_active: true, role: 'seller' });
+    if (!user) return res.status(400).json({ message: 'A valid seller account is required.' });
+
+    const requested = items
+      .map((item) => ({ stock_item_id: Number(item.stock_item_id), quantity: Number(item.quantity) }))
+      .filter((item) => item.stock_item_id && item.quantity > 0);
+    if (!requested.length) return res.status(400).json({ message: 'Enter a quantity for at least one ingredient.' });
+
+    const uniqueIds = new Set(requested.map((item) => item.stock_item_id));
+    if (uniqueIds.size !== requested.length) return res.status(400).json({ message: 'Each ingredient can only be entered once.' });
+
+    const stocks = await db.collection('stock_items').find({ id: { $in: [...uniqueIds] }, is_active: true }).toArray();
+    const stockMap = new Map(stocks.map((stock) => [stock.id, stock]));
+    for (const item of requested) {
+      const stock = stockMap.get(item.stock_item_id);
+      if (!stock || !ingredientStockKeys.has(normalizeStockName(stock.name))) {
+        return res.status(400).json({ message: 'One of the selected stock items is not available for seller deduction.' });
+      }
+      if (!Number.isInteger(item.quantity)) {
+        return res.status(400).json({ message: `${stock.name} must be entered as a whole number of pieces.` });
+      }
+    }
+
+    for (const item of requested) {
+      const stock = stockMap.get(item.stock_item_id);
+      const result = await db.collection('stock_items').updateOne(
+        { id: stock.id, quantity_on_hand: { $gte: item.quantity } },
+        { $inc: { quantity_on_hand: -item.quantity } }
+      );
+      if (!result.modifiedCount) throw new Error(`Not enough ${stock.name} in stock.`);
+      applied.push({ stock, quantity: item.quantity });
+    }
+
+    const movementDate = todayDate();
+    const movements = [];
+    for (const item of applied) {
+      movements.push({
+        id: await nextId('inventory_movements'),
+        stock_item_id: item.stock.id,
+        sale_id: null,
+        movement_type: 'ingredient_usage',
+        quantity_change: -item.quantity,
+        movement_date: movementDate,
+        note: `Seller ingredient usage by ${user.display_name}`,
+        created_by_user_id: user.id,
+        created_by_name: user.display_name,
+        created_at: new Date()
+      });
+    }
+    await db.collection('inventory_movements').insertMany(movements);
+    ok(res, { deducted: movements.length });
+  } catch (error) {
+    if (applied.length) {
+      await Promise.all(applied.map((item) => db.collection('stock_items').updateOne(
+        { id: item.stock.id },
+        { $inc: { quantity_on_hand: item.quantity } }
+      )));
+    }
+    next(error);
+  }
+});
+
 app.post('/api/stocks', async (req, res, next) => {
   try {
     const { name, unit, quantity_on_hand = 0, reorder_level = 0 } = req.body;
@@ -433,7 +542,7 @@ app.get('/api/stock-deductions', async (req, res, next) => {
   try {
     const { period, date, start, end, range_end } = getStockDeductionRange(req.query);
     const movements = await db.collection('inventory_movements')
-      .find({ movement_type: 'sale', movement_date: { $gte: start, $lt: end } })
+      .find({ movement_type: { $in: ['sale', 'ingredient_usage'] }, movement_date: { $gte: start, $lt: end } })
       .sort({ movement_date: -1, created_at: -1 })
       .toArray();
     const saleIds = [...new Set(movements.map((movement) => movement.sale_id).filter(Boolean))];
@@ -446,7 +555,7 @@ app.get('/api/stock-deductions', async (req, res, next) => {
     const summaryMap = new Map();
 
     for (const movement of movements) {
-      if (!activeSaleIds.has(movement.sale_id)) continue;
+      if (movement.movement_type === 'sale' && !activeSaleIds.has(movement.sale_id)) continue;
       const stock = stockMap.get(movement.stock_item_id) || {};
       const current = summaryMap.get(movement.stock_item_id) || {
         stock_item_id: movement.stock_item_id,

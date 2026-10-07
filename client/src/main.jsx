@@ -186,7 +186,7 @@ function App() {
 
   useEffect(() => {
     if (!currentUser) return;
-    const allowedTabs = currentUser.role === 'admin' ? ['pos', 'dashboard', 'manage'] : ['pos', 'expenses'];
+    const allowedTabs = currentUser.role === 'admin' ? ['pos', 'dashboard', 'manage'] : ['pos', 'expenses', 'ingredients'];
     if (!allowedTabs.includes(tab)) setTab('pos');
   }, [currentUser, tab]);
 
@@ -346,9 +346,14 @@ function App() {
               </button>
             </>
           ) : (
-            <button className={tab === 'expenses' ? 'active' : ''} onClick={() => setTab('expenses')}>
-              <Wallet size={20} /> Expenses
-            </button>
+            <>
+              <button className={tab === 'expenses' ? 'active' : ''} onClick={() => setTab('expenses')}>
+                <Wallet size={20} /> Expenses
+              </button>
+              <button className={tab === 'ingredients' ? 'active' : ''} onClick={() => setTab('ingredients')}>
+                <Layers size={20} /> Ingredients
+              </button>
+            </>
           )}
         </nav>
         <div className="user-menu">
@@ -527,6 +532,8 @@ function App() {
         <Dashboard setMessage={setMessage} currentUser={currentUser} />
       ) : tab === 'expenses' ? (
         <Expenses setMessage={setMessage} currentUser={currentUser} />
+      ) : tab === 'ingredients' && !isAdmin ? (
+        <Ingredients setMessage={setMessage} currentUser={currentUser} />
       ) : (
         <Manage categories={categories} products={products} stocks={stocks} reload={loadData} setMessage={setMessage} currentUser={currentUser} />
       )}
@@ -1175,6 +1182,113 @@ function Expenses({ setMessage, currentUser }) {
                 }}><Edit3 size={17} /></button>
                 <button title="Delete expense" className="danger-btn" onClick={() => deleteExpense(expense)}><Archive size={17} /></button>
               </div>
+            </article>
+          ))}
+        </div>
+      </section>
+    </main>
+  );
+}
+
+function Ingredients({ setMessage, currentUser }) {
+  const [data, setData] = useState({ date: '', items: [], movements: [] });
+  const [quantities, setQuantities] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const loadIngredients = async () => {
+    const result = await api('/ingredients');
+    setData(result);
+  };
+
+  useEffect(() => {
+    loadIngredients().catch((error) => setMessage(error.message));
+  }, []);
+
+  const submitDeduction = async (event) => {
+    event.preventDefault();
+    const items = data.items
+      .filter((item) => item.available && Number(quantities[item.id] || 0) > 0)
+      .map((item) => ({ stock_item_id: item.id, quantity: Number(quantities[item.id]) }));
+    try {
+      setIsSubmitting(true);
+      await api('/ingredients/deduct', {
+        method: 'POST',
+        body: JSON.stringify({ items, created_by_user_id: currentUser.id })
+      });
+      setQuantities({});
+      await loadIngredients();
+      setMessage('Ingredient stock deducted successfully.');
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const selectedCount = data.items.reduce((sum, item) => sum + Number(quantities[item.id] || 0), 0);
+
+  return (
+    <main className="dashboard-shell ingredients-shell">
+      <section className="dashboard-hero">
+        <div>
+          <h1>Ingredients</h1>
+          <p>Enter the number of pieces used today.</p>
+        </div>
+        <div className="dashboard-controls"><span className="date-chip">{data.date}</span></div>
+      </section>
+
+      <form className="dashboard-panel ingredient-panel" onSubmit={submitDeduction}>
+        <div className="panel-heading">
+          <div>
+            <h2>Stock Usage</h2>
+            <span>Quantities are deducted immediately after saving.</span>
+          </div>
+          <strong className="ingredient-selected-total">{quantityText(selectedCount)} pcs selected</strong>
+        </div>
+
+        <div className="ingredient-grid">
+          {data.items.map((item) => (
+            <label className={`ingredient-item ${item.available ? '' : 'missing'}`} key={item.id || item.name}>
+              <span>
+                <strong>{item.name}</strong>
+                <small>{item.available ? `${quantityText(item.quantity_on_hand)} ${item.unit} available` : 'Not found in Stocks'}</small>
+              </span>
+              <input
+                type="number"
+                inputMode="numeric"
+                min="0"
+                max={item.quantity_on_hand}
+                step="1"
+                disabled={!item.available}
+                value={item.available ? quantities[item.id] || '' : ''}
+                onChange={(event) => setQuantities({ ...quantities, [item.id]: event.target.value })}
+                placeholder="0 pcs"
+              />
+            </label>
+          ))}
+        </div>
+
+        <button className="ingredient-submit" disabled={isSubmitting || selectedCount <= 0}>
+          <Layers size={20} /> {isSubmitting ? 'Saving...' : 'Deduct from Stocks'}
+        </button>
+      </form>
+
+      <section className="dashboard-panel ingredient-history-panel">
+        <div className="panel-heading">
+          <div>
+            <h2>Today's Deductions</h2>
+            <span>{data.movements.length} record{data.movements.length === 1 ? '' : 's'}</span>
+          </div>
+        </div>
+        <div className="ingredient-history-list">
+          {data.movements.length === 0 && <p className="empty">No ingredient deductions today.</p>}
+          {data.movements.map((movement) => (
+            <article className="ingredient-history-row" key={movement.id}>
+              <div>
+                <strong>{movement.stock_name}</strong>
+                <span>{movement.created_by_name || 'Seller'} · {new Date(movement.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+              </div>
+              <b>-{quantityText(Math.abs(movement.quantity_change))} {movement.unit}</b>
             </article>
           ))}
         </div>
