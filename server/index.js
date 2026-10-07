@@ -845,8 +845,9 @@ app.get('/api/dashboard', async (req, res, next) => {
     const startDate = dateStart(start);
     const endDate = dateStart(end);
 
-    const [salesAll, expensesAll, remittances, users] = await Promise.all([
+    const [salesAll, cancelledSales, expensesAll, remittances, users] = await Promise.all([
       db.collection('sales').find({ created_at: { $gte: startDate, $lt: endDate }, status: { $ne: 'cancelled' } }).sort({ created_at: -1 }).toArray(),
+      db.collection('sales').find({ created_at: { $gte: startDate, $lt: endDate }, status: 'cancelled' }).toArray(),
       db.collection('expenses').find({ expense_date: { $gte: start, $lt: end } }).sort({ expense_date: -1, created_at: -1 }).toArray(),
       db.collection('remittances').find({ business_date: { $gte: start, $lt: end } }).sort({ business_date: -1 }).toArray(),
       db.collection('users').find().toArray()
@@ -874,6 +875,7 @@ app.get('/api/dashboard', async (req, res, next) => {
     const summary = {
       sales_total: salesAll.reduce((sum, sale) => sum + Number(sale.total || 0), 0),
       sales_count: salesAll.length,
+      cancelled_count: cancelledSales.length,
       expense_total: expensesAll.reduce((sum, expense) => sum + Number(expense.amount || 0), 0),
       expense_count: expensesAll.length
     };

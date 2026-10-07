@@ -173,7 +173,7 @@ function App() {
   const [saleToast, setSaleToast] = useState('');
   const [lastReceipt, setLastReceipt] = useState(null);
   const [pendingPrint, setPendingPrint] = useState(false);
-  const [sellerSalesTotal, setSellerSalesTotal] = useState(0);
+  const [sellerSummary, setSellerSummary] = useState({ sales_total: 0, cancelled_count: 0, expense_total: 0, net_total: 0 });
   const today = new Date().toISOString().slice(0, 10);
 
   const loadData = async () => {
@@ -216,7 +216,12 @@ function App() {
 
   const loadSellerSalesTotal = async () => {
     const data = await api(`/dashboard?period=day&date=${today}`);
-    setSellerSalesTotal(Number(data?.summary?.sales_total || 0));
+    setSellerSummary({
+      sales_total: Number(data?.summary?.sales_total || 0),
+      cancelled_count: Number(data?.summary?.cancelled_count || 0),
+      expense_total: Number(data?.summary?.expense_total || 0),
+      net_total: Number(data?.summary?.net_total || 0)
+    });
   };
 
   const loadRecentOrders = async () => {
@@ -376,15 +381,29 @@ function App() {
       {tab === 'pos' ? (
         <main className="pos-layout">
           <section className="catalog">
-            <div className="pos-hero">
+            <div className={`pos-hero ${currentUser.role === 'seller' ? 'seller-pos-hero' : ''}`}>
               <div>
                 <span className="seller-chip">Seller POS</span>
                 <h1>KoolITs</h1>
               </div>
               {currentUser.role === 'seller' && (
-                <div className="seller-sales-total">
-                  <span>Today's Sales</span>
-                  <strong>{money(sellerSalesTotal)}</strong>
+                <div className="seller-summary-row">
+                  <article className="seller-summary-card sales">
+                    <span>Today's Sales</span>
+                    <strong>{money(sellerSummary.sales_total)}</strong>
+                  </article>
+                  <article className="seller-summary-card cancelled">
+                    <span>Cancelled Orders</span>
+                    <strong>{sellerSummary.cancelled_count}</strong>
+                  </article>
+                  <article className="seller-summary-card expenses">
+                    <span>Expenses</span>
+                    <strong>{money(sellerSummary.expense_total)}</strong>
+                  </article>
+                  <article className="seller-summary-card net">
+                    <span>Net Sales</span>
+                    <strong>{money(sellerSummary.net_total)}</strong>
+                  </article>
                 </div>
               )}
             </div>

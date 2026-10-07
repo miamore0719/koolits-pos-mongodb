@@ -327,30 +327,62 @@ button {
   text-transform: uppercase;
 }
 
-.seller-sales-total {
+.seller-pos-hero {
+  align-items: stretch;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.seller-summary-row {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.seller-summary-card {
   background: rgba(13, 30, 42, 0.72);
   border: 2px solid rgba(141, 227, 255, 0.5);
-  border-radius: 10px;
+  border-radius: 8px;
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.16);
   color: var(--text-light);
   display: grid;
   gap: 2px;
-  min-width: 150px;
-  padding: 10px 12px;
-  text-align: right;
+  min-width: 0;
+  padding: 8px 10px;
+  text-align: left;
 }
 
-.seller-sales-total span {
+.seller-summary-card span {
   color: rgba(255, 255, 255, 0.7);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 900;
   text-transform: uppercase;
 }
 
-.seller-sales-total strong {
+.seller-summary-card strong {
   color: #8de3ff;
-  font-size: 22px;
+  font-size: 19px;
   line-height: 1;
+}
+
+.seller-summary-card.cancelled {
+  border-color: rgba(255, 93, 93, 0.75);
+}
+
+.seller-summary-card.cancelled strong {
+  color: #ff7373;
+}
+
+.seller-summary-card.expenses strong {
+  color: #ffc36d;
+}
+
+.seller-summary-card.net {
+  border-color: rgba(91, 211, 142, 0.65);
+}
+
+.seller-summary-card.net strong {
+  color: #75e1a3;
 }
 
 .pos-search {
@@ -2174,10 +2206,8 @@ select {
     gap: 8px;
   }
 
-  .seller-sales-total {
-    min-width: 0;
-    text-align: left;
-    width: 100%;
+  .seller-summary-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .cart-panel {
@@ -2300,6 +2330,10 @@ select {
 
   .pos-hero h1 {
     font-size: 32px;
+  }
+
+  .seller-summary-card strong {
+    font-size: 17px;
   }
 
   .category-row {
