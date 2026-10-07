@@ -599,7 +599,7 @@ function Dashboard({ setMessage, currentUser }) {
   const [stockDate, setStockDate] = useState(today);
   const [stockDeductions, setStockDeductions] = useState(null);
   const [stockDeductionSearch, setStockDeductionSearch] = useState('');
-  const [showStockDeductions, setShowStockDeductions] = useState(true);
+  const [showStockDeductions, setShowStockDeductions] = useState(false);
 
   const currentPeriodLabel = period === 'month' ? 'month' : period === 'range' ? 'range' : 'day';
   const selectedMonth = dashboardDate.slice(0, 7);
