@@ -309,7 +309,7 @@ function App() {
   const handleLogin = (user) => {
     localStorage.setItem('koolits-user', JSON.stringify(user));
     setCurrentUser(user);
-    setTab('pos');
+    setTab(user.role === 'admin' ? 'dashboard' : 'pos');
     setMessage('');
   };
 
