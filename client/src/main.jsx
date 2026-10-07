@@ -1393,12 +1393,15 @@ function SalesLineChart({ title, items, labelKey, valueKey, emptyText }) {
 
 function Manage({ categories, products, stocks, reload, setMessage, currentUser }) {
   const unitOptions = ['pcs', 'grams', 'ml', 'liters', 'gallon', 'kg', 'packs', 'boxes', 'others'];
+  const manageToday = new Date().toISOString().slice(0, 10);
   const [manageTab, setManageTab] = useState('products');
   const [productSearch, setProductSearch] = useState('');
   const [productCategory, setProductCategory] = useState('All');
   const [stockSearch, setStockSearch] = useState('');
   const [recipeSearch, setRecipeSearch] = useState('');
   const [orderSearch, setOrderSearch] = useState('');
+  const [orderStartDate, setOrderStartDate] = useState(manageToday);
+  const [orderEndDate, setOrderEndDate] = useState(manageToday);
   const [manageExpenseSearch, setManageExpenseSearch] = useState('');
   const [manageStockSearch, setManageStockSearch] = useState('');
   const [categoryForm, setCategoryForm] = useState({ name: '', color: '#275266' });
@@ -1432,7 +1435,8 @@ function Manage({ categories, products, stocks, reload, setMessage, currentUser 
   };
 
   const loadOrders = async () => {
-    const data = await api('/sales?limit=100');
+    const params = new URLSearchParams({ limit: '500', start_date: orderStartDate, end_date: orderEndDate });
+    const data = await api(`/sales?${params.toString()}`);
     setOrders(data);
   };
 
@@ -1452,7 +1456,7 @@ function Manage({ categories, products, stocks, reload, setMessage, currentUser 
     if (manageTab === 'orders') loadOrders().catch((error) => setMessage(error.message));
     if (manageTab === 'expenses') loadManageExpenses().catch((error) => setMessage(error.message));
     if (manageTab === 'login-logs') loadLoginLogs().catch((error) => setMessage(error.message));
-  }, [manageTab, loginLogDate]);
+  }, [manageTab, loginLogDate, orderStartDate, orderEndDate]);
 
   const save = async (path, form, reset) => {
     try {
@@ -2072,8 +2076,24 @@ function Manage({ categories, products, stocks, reload, setMessage, currentUser 
             </div>
           </div>
 
-          <div className="toolbar single">
+          <div className="toolbar order-filter-toolbar">
             <label className="search-field order-search"><span>Search Orders</span><div><Search size={18} /><input value={orderSearch} onChange={(event) => setOrderSearch(event.target.value)} placeholder="Search receipt, date, item, payment, status" /></div></label>
+            <label className="form-field">
+              <span>Start Date</span>
+              <input type="date" value={orderStartDate} onChange={(event) => {
+                const value = event.target.value;
+                setOrderStartDate(value);
+                if (value > orderEndDate) setOrderEndDate(value);
+              }} />
+            </label>
+            <label className="form-field">
+              <span>End Date</span>
+              <input type="date" value={orderEndDate} onChange={(event) => {
+                const value = event.target.value;
+                setOrderEndDate(value);
+                if (value < orderStartDate) setOrderStartDate(value);
+              }} />
+            </label>
           </div>
 
           <div className="data-table orders-table">

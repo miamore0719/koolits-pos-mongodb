@@ -1763,6 +1763,11 @@ select {
   grid-template-columns: 1fr;
 }
 
+.order-filter-toolbar {
+  align-items: end;
+  grid-template-columns: minmax(260px, 1fr) minmax(150px, 200px) minmax(150px, 200px);
+}
+
 .list-section {
   background: rgba(255, 255, 255, 0.07);
   border: 2px solid rgba(255, 255, 255, 0.1);

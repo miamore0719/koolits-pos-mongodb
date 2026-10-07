@@ -784,8 +784,15 @@ app.get('/api/sales/recent', async (_req, res, next) => {
 
 app.get('/api/sales', async (req, res, next) => {
   try {
-    const limit = Math.min(100, Math.max(1, Number(req.query.limit || 50)));
-    ok(res, await db.collection('sales').find().sort({ created_at: -1 }).limit(limit).toArray());
+    const limit = Math.min(500, Math.max(1, Number(req.query.limit || 100)));
+    const filter = {};
+    const startDate = String(req.query.start_date || '');
+    const endDate = String(req.query.end_date || startDate);
+    if (startDate) {
+      if (endDate < startDate) return res.status(400).json({ message: 'End date cannot be before start date.' });
+      filter.created_at = { $gte: dateStart(startDate), $lt: dateStart(addDays(endDate, 1)) };
+    }
+    ok(res, await db.collection('sales').find(filter).sort({ created_at: -1 }).limit(limit).toArray());
   } catch (error) {
     next(error);
   }
