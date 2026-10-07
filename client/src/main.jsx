@@ -173,7 +173,7 @@ function App() {
   const [saleToast, setSaleToast] = useState('');
   const [lastReceipt, setLastReceipt] = useState(null);
   const [pendingPrint, setPendingPrint] = useState(false);
-  const [sellerSummary, setSellerSummary] = useState({ sales_total: 0, cancelled_count: 0, expense_total: 0, net_total: 0 });
+  const [sellerSummary, setSellerSummary] = useState({ sales_total: 0, cancelled_total: 0, expense_total: 0, net_total: 0 });
   const today = new Date().toISOString().slice(0, 10);
 
   const loadData = async () => {
@@ -216,11 +216,14 @@ function App() {
 
   const loadSellerSalesTotal = async () => {
     const data = await api(`/dashboard?period=day&date=${today}`);
+    const completedSales = Number(data?.summary?.sales_total || 0);
+    const cancelledTotal = Number(data?.summary?.cancelled_total || 0);
+    const expenses = Number(data?.summary?.expense_total || 0);
     setSellerSummary({
-      sales_total: Number(data?.summary?.sales_total || 0),
-      cancelled_count: Number(data?.summary?.cancelled_count || 0),
-      expense_total: Number(data?.summary?.expense_total || 0),
-      net_total: Number(data?.summary?.net_total || 0)
+      sales_total: completedSales + cancelledTotal,
+      cancelled_total: cancelledTotal,
+      expense_total: expenses,
+      net_total: completedSales - expenses
     });
   };
 
@@ -394,7 +397,7 @@ function App() {
                   </article>
                   <article className="seller-summary-card cancelled">
                     <span>Cancelled Orders</span>
-                    <strong>{sellerSummary.cancelled_count}</strong>
+                    <strong>{money(sellerSummary.cancelled_total)}</strong>
                   </article>
                   <article className="seller-summary-card expenses">
                     <span>Expenses</span>

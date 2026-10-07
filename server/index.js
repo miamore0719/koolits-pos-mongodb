@@ -876,6 +876,7 @@ app.get('/api/dashboard', async (req, res, next) => {
       sales_total: salesAll.reduce((sum, sale) => sum + Number(sale.total || 0), 0),
       sales_count: salesAll.length,
       cancelled_count: cancelledSales.length,
+      cancelled_total: cancelledSales.reduce((sum, sale) => sum + Number(sale.total || 0), 0),
       expense_total: expensesAll.reduce((sum, expense) => sum + Number(expense.amount || 0), 0),
       expense_count: expensesAll.length
     };
