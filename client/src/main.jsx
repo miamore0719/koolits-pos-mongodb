@@ -1743,6 +1743,28 @@ function Manage({ categories, products, stocks, reload, setMessage, currentUser 
     return text.includes(orderSearch.toLowerCase());
   });
 
+  const categorySalesSummary = [...filteredOrders
+    .filter((order) => order.status !== 'cancelled')
+    .flatMap((order) => order.items || [])
+    .reduce((summary, item) => {
+      const categoryName = item.category_name || 'Uncategorized';
+      const current = summary.get(categoryName) || {
+        name: categoryName,
+        color: item.category_color || '#6b7f8a',
+        quantity: 0,
+        total: 0
+      };
+      current.quantity += Number(item.quantity || 0);
+      current.total += Number(item.line_total ?? (Number(item.unit_price || 0) * Number(item.quantity || 0)));
+      summary.set(categoryName, current);
+      return summary;
+    }, new Map())
+    .values()]
+    .sort((a, b) => {
+      const rankDifference = getPosCategoryRank(a.name) - getPosCategoryRank(b.name);
+      return rankDifference || a.name.localeCompare(b.name);
+    });
+
   const filteredLoginLogs = loginLogs.filter((log) =>
     `${log.display_name || ''} ${log.username || ''}`.toLowerCase().includes(loginLogSearch.toLowerCase())
   );
@@ -2095,6 +2117,29 @@ function Manage({ categories, products, stocks, reload, setMessage, currentUser 
               }} />
             </label>
           </div>
+
+          <section className="order-category-summary">
+            <div className="order-category-heading">
+              <div>
+                <h3>Sales by Category</h3>
+                <span>Completed orders in the selected range</span>
+              </div>
+              <strong>{money(categorySalesSummary.reduce((sum, item) => sum + item.total, 0))}</strong>
+            </div>
+            <div className="order-category-list">
+              {categorySalesSummary.length === 0 && <p className="empty">No completed sales found for this range.</p>}
+              {categorySalesSummary.map((item) => (
+                <article className="order-category-row" key={item.name}>
+                  <i style={{ background: item.color }} />
+                  <div>
+                    <strong>{item.name}</strong>
+                    <span>{quantityText(item.quantity)} item{item.quantity === 1 ? '' : 's'} sold</span>
+                  </div>
+                  <b>{money(item.total)}</b>
+                </article>
+              ))}
+            </div>
+          </section>
 
           <div className="data-table orders-table">
             <div className="table-head"><span>Receipt</span><span>Date</span><span>Items</span><span>Payment</span><span>Total</span><span>Status</span><span>Actions</span></div>

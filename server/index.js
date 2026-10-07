@@ -792,7 +792,22 @@ app.get('/api/sales', async (req, res, next) => {
       if (endDate < startDate) return res.status(400).json({ message: 'End date cannot be before start date.' });
       filter.created_at = { $gte: dateStart(startDate), $lt: dateStart(addDays(endDate, 1)) };
     }
-    ok(res, await db.collection('sales').find(filter).sort({ created_at: -1 }).limit(limit).toArray());
+    const sales = await db.collection('sales').find(filter).sort({ created_at: -1 }).limit(limit).toArray();
+    const productIds = [...new Set(sales.flatMap((sale) => (sale.items || []).map((item) => item.product_id)).filter(Boolean))];
+    const [products, categories] = await Promise.all([
+      productIds.length ? db.collection('products').find({ id: { $in: productIds } }).toArray() : [],
+      db.collection('categories').find().toArray()
+    ]);
+    const productMap = new Map(products.map((product) => [product.id, product]));
+    const categoryMap = new Map(categories.map((category) => [category.id, category]));
+    ok(res, sales.map((sale) => ({
+      ...sale,
+      items: (sale.items || []).map((item) => {
+        const product = productMap.get(item.product_id);
+        const category = categoryMap.get(product?.category_id);
+        return { ...item, category_name: category?.name || 'Uncategorized', category_color: category?.color || '#6b7f8a' };
+      })
+    })));
   } catch (error) {
     next(error);
   }
