@@ -579,7 +579,7 @@ function App() {
       ) : tab === 'ingredients' && !isAdmin ? (
         <Ingredients setMessage={setMessage} currentUser={currentUser} />
       ) : tab === 'add-stock' && !isAdmin ? (
-        <SellerStockAddition stocks={stocks} reload={loadData} setMessage={setMessage} currentUser={currentUser} />
+        <SellerStockAddition stocks={stocks} setMessage={setMessage} currentUser={currentUser} />
       ) : (
         <Manage categories={categories} products={products} stocks={stocks} reload={loadData} setMessage={setMessage} currentUser={currentUser} />
       )}
@@ -1426,31 +1426,42 @@ function Ingredients({ setMessage, currentUser }) {
   );
 }
 
-function SellerStockAddition({ stocks, reload, setMessage, currentUser }) {
+function SellerStockAddition({ stocks, setMessage, currentUser }) {
   const [stockSearch, setStockSearch] = useState('');
   const [stockId, setStockId] = useState('');
   const [quantity, setQuantity] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [requests, setRequests] = useState([]);
   const filteredStocks = stocks.filter((stock) =>
     `${stock.name} ${stock.unit}`.toLowerCase().includes(stockSearch.toLowerCase())
   );
   const selectedStock = stocks.find((stock) => stock.id === Number(stockId));
 
+  const loadRequests = async () => {
+    const data = await api(`/stock-requests?created_by_user_id=${currentUser.id}`);
+    setRequests(data);
+  };
+
+  useEffect(() => {
+    loadRequests().catch((error) => setMessage(error.message));
+  }, [currentUser.id]);
+
   const addStockQuantity = async (event) => {
     event.preventDefault();
     try {
       setIsSubmitting(true);
-      await api(`/stocks/${stockId}/restock`, {
+      await api('/stock-requests', {
         method: 'POST',
         body: JSON.stringify({
+          stock_item_id: Number(stockId),
           quantity: Number(quantity),
           created_by_user_id: currentUser.id
         })
       });
       const stockName = selectedStock?.name || 'Stock';
       setQuantity('');
-      await reload();
-      setMessage(`${stockName} quantity added.`);
+      await loadRequests();
+      setMessage(`${stockName} request submitted for admin approval.`);
     } catch (error) {
       setMessage(error.message);
     } finally {
@@ -1463,15 +1474,15 @@ function SellerStockAddition({ stocks, reload, setMessage, currentUser }) {
       <section className="dashboard-hero">
         <div>
           <h1>Add Stock</h1>
-          <p>Add quantity to an existing stock item.</p>
+          <p>Request quantity for an existing stock item.</p>
         </div>
       </section>
 
       <section className="dashboard-panel seller-stock-panel">
         <div className="panel-heading">
           <div>
-            <h2>Stock Quantity</h2>
-            <span>Only the quantity will be changed.</span>
+            <h2>Stock Quantity Request</h2>
+            <span>Stock changes only after an admin approves the request.</span>
           </div>
         </div>
 
@@ -1494,7 +1505,7 @@ function SellerStockAddition({ stocks, reload, setMessage, currentUser }) {
             <input required type="number" min="0.001" step="0.001" value={quantity} onChange={(event) => setQuantity(event.target.value)} placeholder="0" />
           </label>
           <button disabled={isSubmitting || !stockId || Number(quantity) <= 0}>
-            <PlusCircle size={20} /> {isSubmitting ? 'Adding...' : 'Add Quantity'}
+            <PlusCircle size={20} /> {isSubmitting ? 'Submitting...' : 'Submit for Approval'}
           </button>
         </form>
 
@@ -1502,10 +1513,33 @@ function SellerStockAddition({ stocks, reload, setMessage, currentUser }) {
           <div className="seller-stock-preview">
             <span>Current Quantity</span>
             <strong>{quantityText(selectedStock.quantity_on_hand)} {selectedStock.unit}</strong>
-            <span>After Adding</span>
+            <span>After Approval</span>
             <strong>{quantityText(Number(selectedStock.quantity_on_hand) + Number(quantity || 0))} {selectedStock.unit}</strong>
           </div>
         )}
+      </section>
+
+      <section className="dashboard-panel seller-stock-requests">
+        <div className="panel-heading">
+          <div>
+            <h2>My Stock Requests</h2>
+            <span>{requests.length} request{requests.length === 1 ? '' : 's'}</span>
+          </div>
+        </div>
+        <div className="seller-stock-request-list">
+          {requests.length === 0 && <p className="empty">No stock requests yet.</p>}
+          {requests.map((request) => (
+            <article className="seller-stock-request-row" key={request.id}>
+              <div>
+                <strong>{request.stock_name}</strong>
+                <span>{new Date(request.created_at).toLocaleString()} · {quantityText(request.quantity)} {request.unit}</span>
+              </div>
+              <span className={`status-pill ${request.status === 'approved' ? 'remitted' : request.status === 'rejected' ? 'cancelled' : 'pending'}`}>
+                {request.status}
+              </span>
+            </article>
+          ))}
+        </div>
       </section>
     </main>
   );
@@ -1602,6 +1636,7 @@ function Manage({ categories, products, stocks, reload, setMessage, currentUser 
   const [loginLogs, setLoginLogs] = useState([]);
   const [loginLogDate, setLoginLogDate] = useState(new Date().toISOString().slice(0, 10));
   const [loginLogSearch, setLoginLogSearch] = useState('');
+  const [stockRequests, setStockRequests] = useState([]);
 
   const loadUsers = async () => {
     const data = await api('/users');
@@ -1625,11 +1660,21 @@ function Manage({ categories, products, stocks, reload, setMessage, currentUser 
     setLoginLogs(data);
   };
 
+  const loadStockRequests = async () => {
+    const data = await api('/stock-requests');
+    setStockRequests([...data].sort((a, b) => {
+      if (a.status === 'pending' && b.status !== 'pending') return -1;
+      if (a.status !== 'pending' && b.status === 'pending') return 1;
+      return new Date(b.created_at) - new Date(a.created_at);
+    }));
+  };
+
   useEffect(() => {
     if (manageTab === 'accounts') loadUsers().catch((error) => setMessage(error.message));
     if (manageTab === 'orders') loadOrders().catch((error) => setMessage(error.message));
     if (manageTab === 'expenses') loadManageExpenses().catch((error) => setMessage(error.message));
     if (manageTab === 'login-logs') loadLoginLogs().catch((error) => setMessage(error.message));
+    if (manageTab === 'stock-requests') loadStockRequests().catch((error) => setMessage(error.message));
   }, [manageTab, loginLogDate, orderStartDate, orderEndDate]);
 
   const save = async (path, form, reset) => {
@@ -1882,6 +1927,21 @@ function Manage({ categories, products, stocks, reload, setMessage, currentUser 
     }
   };
 
+  const reviewStockRequest = async (request, action) => {
+    const verb = action === 'approve' ? 'Approve' : 'Reject';
+    if (!window.confirm(`${verb} ${quantityText(request.quantity)} ${request.unit} of ${request.stock_name}?`)) return;
+    try {
+      await api(`/stock-requests/${request.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ action, reviewed_by_user_id: currentUser.id })
+      });
+      await Promise.all([loadStockRequests(), reload()]);
+      setMessage(`Stock request ${action === 'approve' ? 'approved and added to inventory' : 'rejected'}.`);
+    } catch (error) {
+      setMessage(error.message);
+    }
+  };
+
   const filteredProducts = products.filter((product) => {
     const matchesCategory = productCategory === 'All' || product.category_name === productCategory;
     const text = `${product.name} ${product.category_name}`.toLowerCase();
@@ -1956,6 +2016,7 @@ function Manage({ categories, products, stocks, reload, setMessage, currentUser 
           <button className={manageTab === 'recipes' ? 'active' : ''} onClick={() => setManageTab('recipes')}><ClipboardList size={20} /> Product Stock Recipe</button>
           <button className={manageTab === 'expenses' ? 'active' : ''} onClick={() => setManageTab('expenses')}><Wallet size={20} /> Expenses</button>
           <button className={manageTab === 'orders' ? 'active' : ''} onClick={() => setManageTab('orders')}><ReceiptText size={20} /> Manage Order</button>
+          <button className={manageTab === 'stock-requests' ? 'active' : ''} onClick={() => setManageTab('stock-requests')}><PlusCircle size={20} /> Stock Requests</button>
           <button className={manageTab === 'accounts' ? 'active' : ''} onClick={() => setManageTab('accounts')}><UserRound size={20} /> Accounts</button>
           <button className={manageTab === 'login-logs' ? 'active' : ''} onClick={() => setManageTab('login-logs')}><LogIn size={20} /> Login Logs</button>
         </div>
@@ -2341,6 +2402,38 @@ function Manage({ categories, products, stocks, reload, setMessage, currentUser 
                 </div>
               );
             })}
+          </div>
+        </section>
+      )}
+
+      {manageTab === 'stock-requests' && (
+        <section className="manage-panel full">
+          <div className="panel-heading">
+            <div>
+              <h2>Stock Requests</h2>
+              <span>{stockRequests.filter((request) => request.status === 'pending').length} pending request{stockRequests.filter((request) => request.status === 'pending').length === 1 ? '' : 's'}</span>
+            </div>
+          </div>
+
+          <div className="data-table stock-requests-table">
+            <div className="table-head"><span>Stock Item</span><span>Requested By</span><span>Quantity</span><span>Requested</span><span>Status</span><span>Actions</span></div>
+            {stockRequests.length === 0 && <p className="empty">No stock requests found.</p>}
+            {stockRequests.map((request) => (
+              <div className="table-row" key={request.id}>
+                <div>
+                  <strong>{request.stock_name}</strong>
+                  <span>{quantityText(request.current_quantity)} {request.unit} currently</span>
+                </div>
+                <span>{request.created_by_name}</span>
+                <strong>+{quantityText(request.quantity)} {request.unit}</strong>
+                <span>{new Date(request.created_at).toLocaleString()}</span>
+                <span className={`status-pill ${request.status === 'approved' ? 'remitted' : request.status === 'rejected' ? 'cancelled' : 'pending'}`}>{request.status}</span>
+                <div className="row-actions stock-request-actions">
+                  <button disabled={request.status !== 'pending'} title="Approve and add to stock" onClick={() => reviewStockRequest(request, 'approve')}><CheckCircle2 size={17} /> Approve</button>
+                  <button disabled={request.status !== 'pending'} className="danger-btn" title="Reject request" onClick={() => reviewStockRequest(request, 'reject')}><X size={17} /> Reject</button>
+                </div>
+              </div>
+            ))}
           </div>
         </section>
       )}

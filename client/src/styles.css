@@ -1406,6 +1406,36 @@ select {
   grid-row: 2;
 }
 
+.seller-stock-requests {
+  max-width: 920px;
+}
+
+.seller-stock-request-list {
+  display: grid;
+  gap: 8px;
+}
+
+.seller-stock-request-row {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.07);
+  border: 2px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 11px 12px;
+}
+
+.seller-stock-request-row > div {
+  display: grid;
+  gap: 3px;
+}
+
+.seller-stock-request-row > div span {
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 12px;
+}
+
 .finance-columns {
   display: grid;
   gap: 16px;
@@ -2067,6 +2097,25 @@ select {
 }
 
 .accounts-table .row-actions button {
+  width: auto;
+}
+
+.stock-requests-table .table-head,
+.stock-requests-table .table-row {
+  grid-template-columns: minmax(170px, 1.2fr) minmax(130px, 0.9fr) minmax(110px, 0.7fr) minmax(170px, 1fr) 110px minmax(210px, 1.2fr);
+}
+
+.stock-requests-table .table-row > div:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.stock-requests-table .table-row > div:first-child span {
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 12px;
+}
+
+.stock-request-actions button {
   width: auto;
 }
 

@@ -532,6 +532,109 @@ app.post('/api/stocks/:id/restock', async (req, res, next) => {
   }
 });
 
+app.post('/api/stock-requests', async (req, res, next) => {
+  try {
+    const stockId = Number(req.body.stock_item_id);
+    const quantity = Number(req.body.quantity);
+    const userId = Number(req.body.created_by_user_id);
+    const [stock, seller] = await Promise.all([
+      db.collection('stock_items').findOne({ id: stockId, is_active: true }),
+      db.collection('users').findOne({ id: userId, is_active: true, role: 'seller' })
+    ]);
+    if (!stock) return res.status(404).json({ message: 'Stock item not found.' });
+    if (!seller) return res.status(400).json({ message: 'A valid seller account is required.' });
+    if (!quantity || quantity <= 0) return res.status(400).json({ message: 'Quantity must be greater than zero.' });
+    const request = {
+      id: await nextId('stock_requests'),
+      stock_item_id: stock.id,
+      quantity,
+      status: 'pending',
+      created_by_user_id: seller.id,
+      created_at: new Date()
+    };
+    await db.collection('stock_requests').insertOne(request);
+    ok(res, request);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get('/api/stock-requests', async (req, res, next) => {
+  try {
+    const query = {};
+    if (req.query.status) query.status = String(req.query.status);
+    if (req.query.created_by_user_id) query.created_by_user_id = Number(req.query.created_by_user_id);
+    const requests = await db.collection('stock_requests').find(query).sort({ created_at: -1 }).limit(500).toArray();
+    const [stocks, users] = await Promise.all([
+      db.collection('stock_items').find().toArray(),
+      db.collection('users').find().toArray()
+    ]);
+    const stockMap = new Map(stocks.map((stock) => [stock.id, stock]));
+    const userMap = new Map(users.map((user) => [user.id, user]));
+    ok(res, requests.map((request) => ({
+      ...request,
+      stock_name: stockMap.get(request.stock_item_id)?.name || 'Unknown Stock',
+      unit: stockMap.get(request.stock_item_id)?.unit || '',
+      current_quantity: Number(stockMap.get(request.stock_item_id)?.quantity_on_hand || 0),
+      created_by_name: userMap.get(request.created_by_user_id)?.display_name || 'Unknown Seller',
+      reviewed_by_name: userMap.get(request.reviewed_by_user_id)?.display_name || null
+    })));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.patch('/api/stock-requests/:id', async (req, res, next) => {
+  try {
+    const id = Number(req.params.id);
+    const action = String(req.body.action || '');
+    const adminId = Number(req.body.reviewed_by_user_id);
+    const admin = await db.collection('users').findOne({ id: adminId, is_active: true, role: 'admin' });
+    if (!admin) return res.status(400).json({ message: 'A valid admin account is required.' });
+    if (!['approve', 'reject'].includes(action)) return res.status(400).json({ message: 'Choose approve or reject.' });
+
+    const request = await db.collection('stock_requests').findOne({ id });
+    if (!request) return res.status(404).json({ message: 'Stock request not found.' });
+    if (request.status !== 'pending') return res.status(409).json({ message: 'This stock request has already been reviewed.' });
+
+    const status = action === 'approve' ? 'approved' : 'rejected';
+    const reviewedAt = new Date();
+    const review = await db.collection('stock_requests').updateOne(
+      { id, status: 'pending' },
+      { $set: { status, reviewed_by_user_id: admin.id, reviewed_at: reviewedAt } }
+    );
+    if (!review.modifiedCount) return res.status(409).json({ message: 'This stock request has already been reviewed.' });
+
+    if (status === 'approved') {
+      const stock = await db.collection('stock_items').findOne({ id: request.stock_item_id, is_active: true });
+      if (!stock) {
+        await db.collection('stock_requests').updateOne({ id }, { $set: { status: 'rejected' } });
+        return res.status(404).json({ message: 'The requested stock item is no longer active.' });
+      }
+      await db.collection('stock_items').updateOne({ id: stock.id }, { $inc: { quantity_on_hand: Number(request.quantity) } });
+      const seller = await db.collection('users').findOne({ id: request.created_by_user_id });
+      await db.collection('inventory_movements').insertOne({
+        id: await nextId('inventory_movements'),
+        stock_item_id: stock.id,
+        sale_id: null,
+        movement_type: 'restock',
+        quantity_change: Number(request.quantity),
+        movement_date: todayDate(),
+        note: `Seller stock request approved for ${seller?.display_name || 'Seller'}`,
+        created_by_user_id: request.created_by_user_id,
+        created_by_name: seller?.display_name || null,
+        approved_by_user_id: admin.id,
+        approved_by_name: admin.display_name,
+        stock_request_id: request.id,
+        created_at: reviewedAt
+      });
+    }
+    ok(res, { id, status });
+  } catch (error) {
+    next(error);
+  }
+});
+
 app.get('/api/stocks/:id/movements', async (req, res, next) => {
   try {
     const stockId = Number(req.params.id);
