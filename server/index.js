@@ -504,9 +504,15 @@ app.delete('/api/stocks/:id', async (req, res, next) => {
 app.post('/api/stocks/:id/restock', async (req, res, next) => {
   try {
     const stockId = Number(req.params.id);
-    const { quantity, movement_date, note = 'Stock quantity added' } = req.body;
+    const { quantity, movement_date, note = 'Stock quantity added', created_by_user_id = null } = req.body;
     const amount = Number(quantity);
     if (!amount || amount <= 0) return res.status(400).json({ message: 'Quantity must be greater than zero.' });
+    const stock = await db.collection('stock_items').findOne({ id: stockId, is_active: true });
+    if (!stock) return res.status(404).json({ message: 'Stock item not found.' });
+    const user = created_by_user_id
+      ? await db.collection('users').findOne({ id: Number(created_by_user_id), is_active: true })
+      : null;
+    if (created_by_user_id && !user) return res.status(400).json({ message: 'A valid user account is required.' });
     await db.collection('stock_items').updateOne({ id: stockId }, { $inc: { quantity_on_hand: amount } });
     await db.collection('inventory_movements').insertOne({
       id: await nextId('inventory_movements'),
@@ -515,7 +521,9 @@ app.post('/api/stocks/:id/restock', async (req, res, next) => {
       movement_type: 'restock',
       quantity_change: amount,
       movement_date: movement_date || todayDate(),
-      note,
+      note: user ? `Stock quantity added by ${user.display_name}` : note,
+      created_by_user_id: user?.id || null,
+      created_by_name: user?.display_name || null,
       created_at: new Date()
     });
     ok(res, { id: stockId, quantity_added: amount });

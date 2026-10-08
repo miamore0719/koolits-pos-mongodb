@@ -193,7 +193,7 @@ function App() {
 
   useEffect(() => {
     if (!currentUser) return;
-    const allowedTabs = currentUser.role === 'admin' ? ['pos', 'dashboard', 'manage'] : ['pos', 'expenses', 'ingredients'];
+    const allowedTabs = currentUser.role === 'admin' ? ['pos', 'dashboard', 'manage'] : ['pos', 'expenses', 'ingredients', 'add-stock'];
     if (!allowedTabs.includes(tab)) setTab('pos');
   }, [currentUser, tab]);
 
@@ -371,6 +371,9 @@ function App() {
               </button>
               <button className={tab === 'ingredients' ? 'active' : ''} onClick={() => setTab('ingredients')}>
                 <Layers size={20} /> Ingredients
+              </button>
+              <button className={tab === 'add-stock' ? 'active' : ''} onClick={() => setTab('add-stock')}>
+                <PlusCircle size={20} /> Add Stock
               </button>
             </>
           )}
@@ -575,6 +578,8 @@ function App() {
         <Expenses setMessage={setMessage} currentUser={currentUser} />
       ) : tab === 'ingredients' && !isAdmin ? (
         <Ingredients setMessage={setMessage} currentUser={currentUser} />
+      ) : tab === 'add-stock' && !isAdmin ? (
+        <SellerStockAddition stocks={stocks} reload={loadData} setMessage={setMessage} currentUser={currentUser} />
       ) : (
         <Manage categories={categories} products={products} stocks={stocks} reload={loadData} setMessage={setMessage} currentUser={currentUser} />
       )}
@@ -1416,6 +1421,91 @@ function Ingredients({ setMessage, currentUser }) {
             </article>
           ))}
         </div>
+      </section>
+    </main>
+  );
+}
+
+function SellerStockAddition({ stocks, reload, setMessage, currentUser }) {
+  const [stockSearch, setStockSearch] = useState('');
+  const [stockId, setStockId] = useState('');
+  const [quantity, setQuantity] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const filteredStocks = stocks.filter((stock) =>
+    `${stock.name} ${stock.unit}`.toLowerCase().includes(stockSearch.toLowerCase())
+  );
+  const selectedStock = stocks.find((stock) => stock.id === Number(stockId));
+
+  const addStockQuantity = async (event) => {
+    event.preventDefault();
+    try {
+      setIsSubmitting(true);
+      await api(`/stocks/${stockId}/restock`, {
+        method: 'POST',
+        body: JSON.stringify({
+          quantity: Number(quantity),
+          created_by_user_id: currentUser.id
+        })
+      });
+      const stockName = selectedStock?.name || 'Stock';
+      setQuantity('');
+      await reload();
+      setMessage(`${stockName} quantity added.`);
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <main className="dashboard-shell seller-stock-shell">
+      <section className="dashboard-hero">
+        <div>
+          <h1>Add Stock</h1>
+          <p>Add quantity to an existing stock item.</p>
+        </div>
+      </section>
+
+      <section className="dashboard-panel seller-stock-panel">
+        <div className="panel-heading">
+          <div>
+            <h2>Stock Quantity</h2>
+            <span>Only the quantity will be changed.</span>
+          </div>
+        </div>
+
+        <form className="seller-stock-form" onSubmit={addStockQuantity}>
+          <label className="search-field">
+            <span>Search Existing Stocks</span>
+            <div><Search size={18} /><input value={stockSearch} onChange={(event) => setStockSearch(event.target.value)} placeholder="Search stock item or unit" /></div>
+          </label>
+          <label className="form-field">
+            <span>Stock Item</span>
+            <select required value={stockId} onChange={(event) => setStockId(event.target.value)}>
+              <option value="">Select existing stock</option>
+              {filteredStocks.map((stock) => (
+                <option value={stock.id} key={stock.id}>{stock.name} ({quantityText(stock.quantity_on_hand)} {stock.unit})</option>
+              ))}
+            </select>
+          </label>
+          <label className="form-field">
+            <span>Quantity to Add</span>
+            <input required type="number" min="0.001" step="0.001" value={quantity} onChange={(event) => setQuantity(event.target.value)} placeholder="0" />
+          </label>
+          <button disabled={isSubmitting || !stockId || Number(quantity) <= 0}>
+            <PlusCircle size={20} /> {isSubmitting ? 'Adding...' : 'Add Quantity'}
+          </button>
+        </form>
+
+        {selectedStock && (
+          <div className="seller-stock-preview">
+            <span>Current Quantity</span>
+            <strong>{quantityText(selectedStock.quantity_on_hand)} {selectedStock.unit}</strong>
+            <span>After Adding</span>
+            <strong>{quantityText(Number(selectedStock.quantity_on_hand) + Number(quantity || 0))} {selectedStock.unit}</strong>
+          </div>
+        )}
       </section>
     </main>
   );
