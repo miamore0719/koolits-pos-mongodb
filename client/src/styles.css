@@ -2105,6 +2105,19 @@ select {
   grid-template-columns: minmax(170px, 1.2fr) minmax(130px, 0.9fr) minmax(110px, 0.7fr) minmax(170px, 1fr) 110px minmax(210px, 1.2fr);
 }
 
+.stock-request-toolbar {
+  align-items: end;
+  grid-template-columns: minmax(180px, 240px) auto;
+  justify-content: start;
+}
+
+.stock-request-all-button {
+  border-radius: 8px;
+  font-weight: 800;
+  min-height: 50px;
+  padding: 0 16px;
+}
+
 .stock-requests-table .table-row > div:first-child {
   display: grid;
   gap: 3px;

@@ -1637,6 +1637,7 @@ function Manage({ categories, products, stocks, reload, setMessage, currentUser 
   const [loginLogDate, setLoginLogDate] = useState(new Date().toISOString().slice(0, 10));
   const [loginLogSearch, setLoginLogSearch] = useState('');
   const [stockRequests, setStockRequests] = useState([]);
+  const [stockRequestDate, setStockRequestDate] = useState(manageToday);
 
   const loadUsers = async () => {
     const data = await api('/users');
@@ -1661,7 +1662,8 @@ function Manage({ categories, products, stocks, reload, setMessage, currentUser 
   };
 
   const loadStockRequests = async () => {
-    const data = await api('/stock-requests');
+    const dateQuery = stockRequestDate ? `?date=${encodeURIComponent(stockRequestDate)}` : '';
+    const data = await api(`/stock-requests${dateQuery}`);
     setStockRequests([...data].sort((a, b) => {
       if (a.status === 'pending' && b.status !== 'pending') return -1;
       if (a.status !== 'pending' && b.status === 'pending') return 1;
@@ -1675,7 +1677,7 @@ function Manage({ categories, products, stocks, reload, setMessage, currentUser 
     if (manageTab === 'expenses') loadManageExpenses().catch((error) => setMessage(error.message));
     if (manageTab === 'login-logs') loadLoginLogs().catch((error) => setMessage(error.message));
     if (manageTab === 'stock-requests') loadStockRequests().catch((error) => setMessage(error.message));
-  }, [manageTab, loginLogDate, orderStartDate, orderEndDate]);
+  }, [manageTab, loginLogDate, orderStartDate, orderEndDate, stockRequestDate]);
 
   const save = async (path, form, reset) => {
     try {
@@ -2413,6 +2415,14 @@ function Manage({ categories, products, stocks, reload, setMessage, currentUser 
               <h2>Stock Requests</h2>
               <span>{stockRequests.filter((request) => request.status === 'pending').length} pending request{stockRequests.filter((request) => request.status === 'pending').length === 1 ? '' : 's'}</span>
             </div>
+          </div>
+
+          <div className="toolbar stock-request-toolbar">
+            <label className="form-field">
+              <span>Request Date</span>
+              <input type="date" value={stockRequestDate} onChange={(event) => setStockRequestDate(event.target.value)} />
+            </label>
+            <button type="button" className="ghost-btn stock-request-all-button" onClick={() => setStockRequestDate('')}>All Dates</button>
           </div>
 
           <div className="data-table stock-requests-table">

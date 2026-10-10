@@ -564,6 +564,10 @@ app.get('/api/stock-requests', async (req, res, next) => {
     const query = {};
     if (req.query.status) query.status = String(req.query.status);
     if (req.query.created_by_user_id) query.created_by_user_id = Number(req.query.created_by_user_id);
+    if (req.query.date) {
+      const requestDate = String(req.query.date);
+      query.created_at = { $gte: dateStart(requestDate), $lt: dateStart(addDays(requestDate, 1)) };
+    }
     const requests = await db.collection('stock_requests').find(query).sort({ created_at: -1 }).limit(500).toArray();
     const [stocks, users] = await Promise.all([
       db.collection('stock_items').find().toArray(),
