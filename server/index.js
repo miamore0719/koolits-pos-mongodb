@@ -22,6 +22,18 @@ const verifyPassword = (password, storedHash) => {
   if (candidate.length !== hash.length) return false;
   return crypto.timingSafeEqual(Buffer.from(candidate, 'hex'), Buffer.from(hash, 'hex'));
 };
+const sessionTokenHash = (token) => crypto.createHash('sha256').update(token).digest('hex');
+const authenticatedUser = async (req) => {
+  const authorization = String(req.headers.authorization || '');
+  const token = authorization.startsWith('Bearer ') ? authorization.slice(7).trim() : '';
+  if (!token) return null;
+  const session = await db.collection('auth_sessions').findOne({
+    token_hash: sessionTokenHash(token),
+    expires_at: { $gt: new Date() }
+  });
+  if (!session) return null;
+  return db.collection('users').findOne({ id: session.user_id, is_active: true });
+};
 
 const todayDate = () => new Date().toISOString().slice(0, 10);
 const monthStart = (value) => `${value.slice(0, 7)}-01`;
@@ -155,7 +167,16 @@ app.post('/api/auth/login', async (req, res, next) => {
         login_at: loginAt
       });
     }
-    ok(res, { id: user.id, username: user.username, display_name: user.display_name, role: user.role });
+    const sessionToken = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    await db.collection('auth_sessions').insertOne({
+      id: await nextId('auth_sessions'),
+      user_id: user.id,
+      token_hash: sessionTokenHash(sessionToken),
+      expires_at: expiresAt,
+      created_at: new Date()
+    });
+    ok(res, { id: user.id, username: user.username, display_name: user.display_name, role: user.role, session_token: sessionToken });
   } catch (error) {
     next(error);
   }
@@ -695,6 +716,39 @@ app.get('/api/stock-deductions', async (req, res, next) => {
       total_movements: [...summaryMap.values()].reduce((sum, item) => sum + Number(item.movement_count || 0), 0),
       items: [...summaryMap.values()].sort((a, b) => b.deducted_quantity - a.deducted_quantity || a.stock_name.localeCompare(b.stock_name))
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get('/api/seller-stock-deductions', async (req, res, next) => {
+  try {
+    const admin = await authenticatedUser(req);
+    if (!admin || admin.role !== 'admin') return res.status(403).json({ message: 'Admin access is required.' });
+    const query = { movement_type: 'ingredient_usage' };
+    const startDate = String(req.query.start_date || '');
+    const endDate = String(req.query.end_date || startDate);
+    if (startDate) {
+      if (endDate < startDate) return res.status(400).json({ message: 'End date cannot be before start date.' });
+      query.movement_date = { $gte: startDate, $lte: endDate };
+    }
+    const movements = await db.collection('inventory_movements')
+      .find(query)
+      .sort({ movement_date: -1, created_at: -1 })
+      .limit(1000)
+      .toArray();
+    const [stocks, users] = await Promise.all([
+      db.collection('stock_items').find().toArray(),
+      db.collection('users').find().toArray()
+    ]);
+    const stockMap = new Map(stocks.map((stock) => [stock.id, stock]));
+    const userMap = new Map(users.map((user) => [user.id, user]));
+    ok(res, movements.map((movement) => ({
+      ...movement,
+      stock_name: stockMap.get(movement.stock_item_id)?.name || 'Unknown Stock',
+      unit: stockMap.get(movement.stock_item_id)?.unit || '',
+      seller_name: movement.created_by_name || userMap.get(movement.created_by_user_id)?.display_name || 'Unknown Seller'
+    })));
   } catch (error) {
     next(error);
   }

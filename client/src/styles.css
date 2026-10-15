@@ -2111,6 +2111,27 @@ select {
   justify-content: start;
 }
 
+.deduction-history-toolbar {
+  align-items: end;
+  grid-template-columns: minmax(260px, 1fr) minmax(145px, 190px) minmax(145px, 190px) auto;
+}
+
+.deduction-all-button {
+  border-radius: 8px;
+  font-weight: 800;
+  min-height: 50px;
+  padding: 0 16px;
+}
+
+.deduction-history-table .table-head,
+.deduction-history-table .table-row {
+  grid-template-columns: minmax(180px, 1.3fr) minmax(140px, 1fr) minmax(150px, 0.9fr) minmax(120px, 0.8fr) minmax(130px, 0.8fr);
+}
+
+.deduction-quantity {
+  color: #ff8f8f;
+}
+
 .stock-request-all-button {
   border-radius: 8px;
   font-weight: 800;

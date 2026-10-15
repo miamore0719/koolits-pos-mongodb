@@ -97,8 +97,17 @@ const categoryIcon = (name) => {
 };
 
 async function api(path, options = {}) {
+  let sessionToken = '';
+  try {
+    sessionToken = JSON.parse(localStorage.getItem('koolits-user') || 'null')?.session_token || '';
+  } catch {
+    sessionToken = '';
+  }
   const response = await fetch(`${API}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {})
+    },
     ...options
   });
   const data = await response.json().catch(() => null);
@@ -1638,6 +1647,10 @@ function Manage({ categories, products, stocks, reload, setMessage, currentUser 
   const [loginLogSearch, setLoginLogSearch] = useState('');
   const [stockRequests, setStockRequests] = useState([]);
   const [stockRequestDate, setStockRequestDate] = useState(manageToday);
+  const [deductionHistory, setDeductionHistory] = useState([]);
+  const [deductionSearch, setDeductionSearch] = useState('');
+  const [deductionStartDate, setDeductionStartDate] = useState(manageToday);
+  const [deductionEndDate, setDeductionEndDate] = useState(manageToday);
 
   const loadUsers = async () => {
     const data = await api('/users');
@@ -1671,13 +1684,23 @@ function Manage({ categories, products, stocks, reload, setMessage, currentUser 
     }));
   };
 
+  const loadDeductionHistory = async () => {
+    const params = new URLSearchParams();
+    if (deductionStartDate) params.set('start_date', deductionStartDate);
+    if (deductionEndDate) params.set('end_date', deductionEndDate);
+    const query = params.toString();
+    const data = await api(`/seller-stock-deductions${query ? `?${query}` : ''}`);
+    setDeductionHistory(data);
+  };
+
   useEffect(() => {
     if (manageTab === 'accounts') loadUsers().catch((error) => setMessage(error.message));
     if (manageTab === 'orders') loadOrders().catch((error) => setMessage(error.message));
     if (manageTab === 'expenses') loadManageExpenses().catch((error) => setMessage(error.message));
     if (manageTab === 'login-logs') loadLoginLogs().catch((error) => setMessage(error.message));
     if (manageTab === 'stock-requests') loadStockRequests().catch((error) => setMessage(error.message));
-  }, [manageTab, loginLogDate, orderStartDate, orderEndDate, stockRequestDate]);
+    if (manageTab === 'deduction-history') loadDeductionHistory().catch((error) => setMessage(error.message));
+  }, [manageTab, loginLogDate, orderStartDate, orderEndDate, stockRequestDate, deductionStartDate, deductionEndDate]);
 
   const save = async (path, form, reset) => {
     try {
@@ -2005,6 +2028,11 @@ function Manage({ categories, products, stocks, reload, setMessage, currentUser 
     `${log.display_name || ''} ${log.username || ''}`.toLowerCase().includes(loginLogSearch.toLowerCase())
   );
 
+  const filteredDeductionHistory = deductionHistory.filter((movement) => {
+    const text = `${movement.stock_name} ${movement.seller_name} ${movement.movement_date} ${movement.quantity_change} ${movement.unit}`.toLowerCase();
+    return text.includes(deductionSearch.toLowerCase());
+  });
+
   return (
     <main className="manage-shell">
       <section className="manage-hero">
@@ -2018,6 +2046,7 @@ function Manage({ categories, products, stocks, reload, setMessage, currentUser 
           <button className={manageTab === 'recipes' ? 'active' : ''} onClick={() => setManageTab('recipes')}><ClipboardList size={20} /> Product Stock Recipe</button>
           <button className={manageTab === 'expenses' ? 'active' : ''} onClick={() => setManageTab('expenses')}><Wallet size={20} /> Expenses</button>
           <button className={manageTab === 'orders' ? 'active' : ''} onClick={() => setManageTab('orders')}><ReceiptText size={20} /> Manage Order</button>
+          <button className={manageTab === 'deduction-history' ? 'active' : ''} onClick={() => setManageTab('deduction-history')}><ClipboardList size={20} /> Deduction History</button>
           <button className={manageTab === 'stock-requests' ? 'active' : ''} onClick={() => setManageTab('stock-requests')}><PlusCircle size={20} /> Stock Requests</button>
           <button className={manageTab === 'accounts' ? 'active' : ''} onClick={() => setManageTab('accounts')}><UserRound size={20} /> Accounts</button>
           <button className={manageTab === 'login-logs' ? 'active' : ''} onClick={() => setManageTab('login-logs')}><LogIn size={20} /> Login Logs</button>
@@ -2404,6 +2433,58 @@ function Manage({ categories, products, stocks, reload, setMessage, currentUser 
                 </div>
               );
             })}
+          </div>
+        </section>
+      )}
+
+      {manageTab === 'deduction-history' && (
+        <section className="manage-panel full">
+          <div className="panel-heading">
+            <div>
+              <h2>Seller Stock Deduction History</h2>
+              <span>{filteredDeductionHistory.length} deduction{filteredDeductionHistory.length === 1 ? '' : 's'} found</span>
+            </div>
+          </div>
+
+          <div className="toolbar deduction-history-toolbar">
+            <label className="search-field">
+              <span>Search History</span>
+              <div><Search size={18} /><input value={deductionSearch} onChange={(event) => setDeductionSearch(event.target.value)} placeholder="Search stock, seller, date, quantity" /></div>
+            </label>
+            <label className="form-field">
+              <span>Start Date</span>
+              <input type="date" value={deductionStartDate} onChange={(event) => {
+                const value = event.target.value;
+                setDeductionStartDate(value);
+                if (value && value > deductionEndDate) setDeductionEndDate(value);
+              }} />
+            </label>
+            <label className="form-field">
+              <span>End Date</span>
+              <input type="date" value={deductionEndDate} onChange={(event) => {
+                const value = event.target.value;
+                setDeductionEndDate(value);
+                if (value && value < deductionStartDate) setDeductionStartDate(value);
+              }} />
+            </label>
+            <button type="button" className="ghost-btn deduction-all-button" onClick={() => {
+              setDeductionStartDate('');
+              setDeductionEndDate('');
+            }}>All Dates</button>
+          </div>
+
+          <div className="data-table deduction-history-table">
+            <div className="table-head"><span>Stock Item</span><span>Seller</span><span>Quantity Deducted</span><span>Date</span><span>Time</span></div>
+            {filteredDeductionHistory.length === 0 && <p className="empty">No seller deductions found for this filter.</p>}
+            {filteredDeductionHistory.map((movement) => (
+              <div className="table-row" key={movement.id}>
+                <strong>{movement.stock_name}</strong>
+                <span>{movement.seller_name}</span>
+                <strong className="deduction-quantity">-{quantityText(Math.abs(movement.quantity_change))} {movement.unit}</strong>
+                <span>{movement.movement_date}</span>
+                <span>{new Date(movement.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+              </div>
+            ))}
           </div>
         </section>
       )}
