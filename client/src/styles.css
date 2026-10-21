@@ -2116,6 +2116,14 @@ select {
   grid-template-columns: minmax(260px, 1fr) minmax(145px, 190px) minmax(145px, 190px) auto;
 }
 
+.manual-deduction-form {
+  background: rgba(239, 68, 68, 0.08);
+  border: 2px solid rgba(239, 68, 68, 0.2);
+  border-radius: 8px;
+  margin-bottom: 16px;
+  padding: 12px;
+}
+
 .deduction-all-button {
   border-radius: 8px;
   font-weight: 800;

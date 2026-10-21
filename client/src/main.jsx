@@ -1651,6 +1651,7 @@ function Manage({ categories, products, stocks, reload, setMessage, currentUser 
   const [deductionSearch, setDeductionSearch] = useState('');
   const [deductionStartDate, setDeductionStartDate] = useState(manageToday);
   const [deductionEndDate, setDeductionEndDate] = useState(manageToday);
+  const [manualDeductionForm, setManualDeductionForm] = useState({ stock_item_id: '', quantity: '', movement_date: manageToday, note: '' });
 
   const loadUsers = async () => {
     const data = await api('/users');
@@ -1967,6 +1968,26 @@ function Manage({ categories, products, stocks, reload, setMessage, currentUser 
     }
   };
 
+  const submitManualDeduction = async (event) => {
+    event.preventDefault();
+    try {
+      const deductionDate = manualDeductionForm.movement_date;
+      const filterChanged = deductionStartDate !== deductionDate || deductionEndDate !== deductionDate;
+      await api('/stock-deductions/manual', {
+        method: 'POST',
+        body: JSON.stringify(manualDeductionForm)
+      });
+      setManualDeductionForm({ stock_item_id: '', quantity: '', movement_date: manageToday, note: '' });
+      setDeductionStartDate(deductionDate);
+      setDeductionEndDate(deductionDate);
+      await reload();
+      if (!filterChanged) await loadDeductionHistory();
+      setMessage('Stock quantity deducted and added to the history.');
+    } catch (error) {
+      setMessage(error.message);
+    }
+  };
+
   const filteredProducts = products.filter((product) => {
     const matchesCategory = productCategory === 'All' || product.category_name === productCategory;
     const text = `${product.name} ${product.category_name}`.toLowerCase();
@@ -2029,7 +2050,7 @@ function Manage({ categories, products, stocks, reload, setMessage, currentUser 
   );
 
   const filteredDeductionHistory = deductionHistory.filter((movement) => {
-    const text = `${movement.stock_name} ${movement.seller_name} ${movement.movement_date} ${movement.quantity_change} ${movement.unit}`.toLowerCase();
+    const text = `${movement.stock_name} ${movement.performed_by_name} ${movement.movement_date} ${movement.quantity_change} ${movement.unit} ${movement.note || ''}`.toLowerCase();
     return text.includes(deductionSearch.toLowerCase());
   });
 
@@ -2441,10 +2462,33 @@ function Manage({ categories, products, stocks, reload, setMessage, currentUser 
         <section className="manage-panel full">
           <div className="panel-heading">
             <div>
-              <h2>Seller Stock Deduction History</h2>
+              <h2>Stock Deduction History</h2>
               <span>{filteredDeductionHistory.length} deduction{filteredDeductionHistory.length === 1 ? '' : 's'} found</span>
             </div>
           </div>
+
+          <form className="inline-form manual-deduction-form" onSubmit={submitManualDeduction}>
+            <label className="form-field">
+              <span>Stock Item</span>
+              <select required value={manualDeductionForm.stock_item_id} onChange={(event) => setManualDeductionForm({ ...manualDeductionForm, stock_item_id: event.target.value })}>
+                <option value="">Select stock</option>
+                {stocks.map((stock) => <option value={stock.id} key={stock.id}>{stock.name} ({quantityText(stock.quantity_on_hand)} {stock.unit})</option>)}
+              </select>
+            </label>
+            <label className="form-field">
+              <span>Quantity to Deduct</span>
+              <input required type="number" min="0.001" step="0.001" value={manualDeductionForm.quantity} onChange={(event) => setManualDeductionForm({ ...manualDeductionForm, quantity: event.target.value })} placeholder="0" />
+            </label>
+            <label className="form-field">
+              <span>Deduction Date</span>
+              <input required type="date" value={manualDeductionForm.movement_date} onChange={(event) => setManualDeductionForm({ ...manualDeductionForm, movement_date: event.target.value })} />
+            </label>
+            <label className="form-field">
+              <span>Note</span>
+              <input value={manualDeductionForm.note} onChange={(event) => setManualDeductionForm({ ...manualDeductionForm, note: event.target.value })} placeholder="Optional reason" />
+            </label>
+            <button><Archive size={18} /> Deduct Stock</button>
+          </form>
 
           <div className="toolbar deduction-history-toolbar">
             <label className="search-field">
@@ -2474,12 +2518,12 @@ function Manage({ categories, products, stocks, reload, setMessage, currentUser 
           </div>
 
           <div className="data-table deduction-history-table">
-            <div className="table-head"><span>Stock Item</span><span>Seller</span><span>Quantity Deducted</span><span>Date</span><span>Time</span></div>
-            {filteredDeductionHistory.length === 0 && <p className="empty">No seller deductions found for this filter.</p>}
+            <div className="table-head"><span>Stock Item</span><span>Deducted By</span><span>Quantity Deducted</span><span>Date</span><span>Time</span></div>
+            {filteredDeductionHistory.length === 0 && <p className="empty">No deductions found for this filter.</p>}
             {filteredDeductionHistory.map((movement) => (
               <div className="table-row" key={movement.id}>
                 <strong>{movement.stock_name}</strong>
-                <span>{movement.seller_name}</span>
+                <span>{movement.performed_by_name}</span>
                 <strong className="deduction-quantity">-{quantityText(Math.abs(movement.quantity_change))} {movement.unit}</strong>
                 <span>{movement.movement_date}</span>
                 <span>{new Date(movement.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>

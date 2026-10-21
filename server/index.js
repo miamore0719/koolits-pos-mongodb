@@ -679,7 +679,7 @@ app.get('/api/stock-deductions', async (req, res, next) => {
   try {
     const { period, date, start, end, range_end } = getStockDeductionRange(req.query);
     const movements = await db.collection('inventory_movements')
-      .find({ movement_type: { $in: ['sale', 'ingredient_usage'] }, movement_date: { $gte: start, $lt: end } })
+      .find({ movement_type: { $in: ['sale', 'ingredient_usage', 'manual_deduction'] }, movement_date: { $gte: start, $lt: end } })
       .sort({ movement_date: -1, created_at: -1 })
       .toArray();
     const saleIds = [...new Set(movements.map((movement) => movement.sale_id).filter(Boolean))];
@@ -725,7 +725,7 @@ app.get('/api/seller-stock-deductions', async (req, res, next) => {
   try {
     const admin = await authenticatedUser(req);
     if (!admin || admin.role !== 'admin') return res.status(403).json({ message: 'Admin access is required.' });
-    const query = { movement_type: 'ingredient_usage' };
+    const query = { movement_type: { $in: ['ingredient_usage', 'manual_deduction'] } };
     const startDate = String(req.query.start_date || '');
     const endDate = String(req.query.end_date || startDate);
     if (startDate) {
@@ -747,8 +747,52 @@ app.get('/api/seller-stock-deductions', async (req, res, next) => {
       ...movement,
       stock_name: stockMap.get(movement.stock_item_id)?.name || 'Unknown Stock',
       unit: stockMap.get(movement.stock_item_id)?.unit || '',
-      seller_name: movement.created_by_name || userMap.get(movement.created_by_user_id)?.display_name || 'Unknown Seller'
+      performed_by_name: movement.created_by_name || userMap.get(movement.created_by_user_id)?.display_name || 'Unknown User'
     })));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post('/api/stock-deductions/manual', async (req, res, next) => {
+  try {
+    const admin = await authenticatedUser(req);
+    if (!admin || admin.role !== 'admin') return res.status(403).json({ message: 'Admin access is required.' });
+    const stockId = Number(req.body.stock_item_id);
+    const quantity = Number(req.body.quantity);
+    const movementDate = String(req.body.movement_date || '');
+    const note = String(req.body.note || '').trim();
+    if (!stockId || !quantity || quantity <= 0 || !movementDate) {
+      return res.status(400).json({ message: 'Stock item, quantity, and deduction date are required.' });
+    }
+    const stock = await db.collection('stock_items').findOne({ id: stockId, is_active: true });
+    if (!stock) return res.status(404).json({ message: 'Stock item not found.' });
+    const update = await db.collection('stock_items').updateOne(
+      { id: stock.id, quantity_on_hand: { $gte: quantity } },
+      { $inc: { quantity_on_hand: -quantity } }
+    );
+    if (!update.modifiedCount) {
+      return res.status(409).json({ message: `Not enough ${stock.name} in stock. Available: ${stock.quantity_on_hand} ${stock.unit}.` });
+    }
+    try {
+      const movement = {
+        id: await nextId('inventory_movements'),
+        stock_item_id: stock.id,
+        sale_id: null,
+        movement_type: 'manual_deduction',
+        quantity_change: -quantity,
+        movement_date: movementDate,
+        note: note || `Manual stock deduction by ${admin.display_name}`,
+        created_by_user_id: admin.id,
+        created_by_name: admin.display_name,
+        created_at: new Date()
+      };
+      await db.collection('inventory_movements').insertOne(movement);
+      ok(res, movement);
+    } catch (error) {
+      await db.collection('stock_items').updateOne({ id: stock.id }, { $inc: { quantity_on_hand: quantity } });
+      throw error;
+    }
   } catch (error) {
     next(error);
   }
