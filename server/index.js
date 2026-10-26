@@ -433,9 +433,6 @@ app.post('/api/ingredients/deduct', async (req, res, next) => {
       if (!stock || !ingredientStockKeys.has(normalizeStockName(stock.name))) {
         return res.status(400).json({ message: 'One of the selected stock items is not available for seller deduction.' });
       }
-      if (!Number.isInteger(item.quantity)) {
-        return res.status(400).json({ message: `${stock.name} must be entered as a whole number of pieces.` });
-      }
     }
 
     for (const item of requested) {

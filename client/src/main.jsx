@@ -1381,7 +1381,7 @@ function Ingredients({ setMessage, currentUser }) {
             <h2>Stock Usage</h2>
             <span>Quantities are deducted immediately after saving.</span>
           </div>
-          <strong className="ingredient-selected-total">{quantityText(selectedCount)} pcs selected</strong>
+          <strong className="ingredient-selected-total">{quantityText(selectedCount)} total entered</strong>
         </div>
 
         <div className="ingredient-grid">
@@ -1394,9 +1394,9 @@ function Ingredients({ setMessage, currentUser }) {
               <input
                 type="number"
                 inputMode="numeric"
-                min="0"
+                min="0.001"
                 max={item.quantity_on_hand}
-                step="1"
+                step="0.001"
                 disabled={!item.available}
                 value={item.available ? quantities[item.id] || '' : ''}
                 onChange={(event) => setQuantities({ ...quantities, [item.id]: event.target.value })}
